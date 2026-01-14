@@ -1,0 +1,76 @@
+﻿@page "/todo"
+@using InventoryCRM.Models
+@rendermode InteractiveServer
+
+<h3>You have @todos.Count(todos => !todos.IsCompleted) todo tasks undone</h3>
+
+<input @bind="newToDo" placeholder="Enter a new task" />
+<button @onclick="AddToDo">Add Task</button>
+
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Description</th>
+            <th>Completed</th>
+            <th>Date</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var todo in todos)
+        {
+            <tr>
+                <td>@todo.Id</td>
+                <td>@todo.Todo</td>
+                <td>
+                    <input type="checkbox" @bind="todo.IsCompleted" />
+                    @if (todo.IsCompleted == true)
+                    {
+                        <span style="color:green;">&#10003; Done!</span>
+                    }
+                    else
+                    {
+                        <span style="color:darkred;">&#10003; Not yet!</span>
+                    }
+
+                </td>
+                <td>@todo.Date</td>
+                <td>
+                    <button class="bg-transparent hover:bg-blue-500 text-blue-700 font-semibold hover:text-white py-2 px-4 border border-blue-500 hover:border-transparent rounded"
+                            @onclick="() => DeleteToDo(todo.Id)">
+                        Delete
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<TodoItem> todos = new();
+    string newToDo = string.Empty;
+    int nextId = 1;
+
+    void AddToDo()
+    {
+        if (!string.IsNullOrWhiteSpace(newToDo))
+        {
+            todos.Add(new TodoItem { Todo = newToDo, Date = DateTime.Now, Id = nextId++ });
+            // todos = todos.OrderByDescending(t => t.Id).ToList();
+            //todos = todos.Take(10).ToList(); //Keep only the latest 10 tasks
+            newToDo = string.Empty;
+        }
+    }
+
+    void DeleteToDo(int id)
+    {
+        var itemToRemove = todos.FirstOrDefault(t => t.Id == id);
+        if (itemToRemove != null)
+        {
+            todos.Remove(itemToRemove);
+        }
+    }
+
+}
