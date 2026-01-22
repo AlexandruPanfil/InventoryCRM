@@ -3,6 +3,7 @@ using System;
 using InventoryCRM.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace InventoryCRM.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260120121110_Users")]
+    partial class Users
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -111,7 +114,7 @@ namespace InventoryCRM.Migrations
             modelBuilder.Entity("InventoryCRM.Models.Deposit", b =>
                 {
                     b.HasOne("InventoryCRM.Models.User", "User")
-                        .WithOne("Deposit")
+                        .WithOne("Header")
                         .HasForeignKey("InventoryCRM.Models.Deposit", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -137,7 +140,7 @@ namespace InventoryCRM.Migrations
 
             modelBuilder.Entity("InventoryCRM.Models.User", b =>
                 {
-                    b.Navigation("Deposit");
+                    b.Navigation("Header");
                 });
 #pragma warning restore 612, 618
         }

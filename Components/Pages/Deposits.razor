@@ -1,0 +1,112 @@
+﻿@page "/deposits"
+@using InventoryCRM.Data
+@using InventoryCRM.Models
+@inject InventoryCRM.Services.DepositService DepositService
+@rendermode InteractiveServer
+
+<PageTitle>Deposits</PageTitle>
+
+<h1>Deposits</h1>
+
+<div class="mb-3">
+    <div class="input-group">
+        <input type="text" class="form-control" @bind="depositName"
+               placeholder="Enter the name of deposit" />
+        <button class="btn btn-primary" @onclick="(FindDeposit)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" margin="8" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+            </svg> 
+             Find Deposit
+        </button>
+    </div>
+</div>
+
+
+@if (deposits == null)
+{
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p><em>Loading deposits...</em></p>
+    </div>
+} 
+else if (deposits.Count == 0) 
+{
+    <div class="text-center">
+        <p><em>There is no deposits, You can create a new one</em></p>
+    </div>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var deposit in deposits)
+        {
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div @onclick="() => deposit.IsExpanded = !deposit.IsExpanded">
+                    <strong> @(deposit.IsExpanded ? "▼" : "▶") @deposit.Name</strong>
+                </div>
+                    @if (deposit.IsExpanded)
+                    {
+                        <div class="list-group">
+                            @foreach (var unit in deposit.Unit){
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <p><strong>Unit Name:</strong> @unit.Name</p>
+                                    <p><strong>Unit Quantity:</strong> @unit.Quantity</p>
+                                </div>
+                            }
+                        </div>
+                    }
+            </div> 
+        }
+    </div>
+}
+
+
+
+@code {
+    private List<Deposit>? deposits;
+    private string depositName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDeposits();
+    }
+    private async Task LoadDeposits()
+    {
+        try
+        {
+            deposits = await DepositService.GetAllDepositsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading deposits: {ex.Message}");
+        }
+    }
+    private async Task FindDeposit()
+    {
+        if (!string.IsNullOrWhiteSpace(depositName))
+        {
+            try
+            {
+                deposits =  await DepositService.FindDepositsAsync(depositName);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error finding deposit: {ex.Message}");
+            }
+        }
+        else
+        {
+            await LoadDeposits();
+        }
+    }
+
+    // public async Task HandleKeyPress(KeyboardEventArgs e)
+    // {
+    //     if (e.Key == "Enter")
+    //     {
+    //         await FindDeposit();
+    //     }
+    // }
+}

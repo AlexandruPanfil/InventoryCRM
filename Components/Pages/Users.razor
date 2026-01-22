@@ -1,0 +1,126 @@
+﻿@page "/users"
+@using InventoryCRM.Data
+@using InventoryCRM.Models
+@inject InventoryCRM.Services.UserService UserService
+@rendermode InteractiveServer
+
+<PageTitle>Users</PageTitle>
+
+<h1>Users</h1>
+
+@* <p>This component demonstrates showing data.</p> *@
+
+<div class="mb-3">
+    <div class="input-group">
+        <input type="text" class="form-control" @bind="newUserName"
+               placeholder="Enter the name of user" @onkeyup="HandleKeyPress" />
+        <button class="btn btn-secondary" @onclick="(FindByUsername)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" margin="8" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16" >
+                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+            </svg>
+             Find User 
+        </button>
+        <button class="btn btn-primary" @onclick="(AddUser)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-fill-add" viewBox="0 0 16 16">
+                <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.5-5v1h1a.5.5 0 0 1 0 1h-1v1a.5.5 0 0 1-1 0v-1h-1a.5.5 0 0 1 0-1h1v-1a.5.5 0 0 1 1 0m-2-6a3 3 0 1 1-6 0 3 3 0 0 1 6 0" />
+                <path d="M2 13c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4" />
+            </svg> Create New User
+        </button>
+    </div>
+</div>
+
+
+@if (users == null)
+{
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p><em>Loading users...</em></p>
+    </div>
+}
+else if (users.Count == 0)
+{
+    <div class="text-center">
+        <p><em>There is no users, You can create a new one</em></p>
+    </div>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var user in users)
+        {
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>@user.Username</strong>
+                    <div><small class="text-muted">Deposit: @user.Deposit.Name</small></div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+
+
+@code {
+    private List<User>? users;
+    private string newUserName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+    private async Task LoadUsers()
+    {
+        try
+        {
+            users = await UserService.GetAllUsersAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading Users: {ex.Message}");
+        }
+    }
+    private async Task AddUser()
+    {
+        if (!string.IsNullOrWhiteSpace(newUserName))
+        {
+            try
+            {
+                await UserService.CreateUsersAsync(newUserName);
+                newUserName = string.Empty;
+                await LoadUsers();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error creating deposit: {ex.Message}");
+            }
+        }
+    }
+    private async Task FindByUsername()
+    {
+        if (!string.IsNullOrWhiteSpace(newUserName))
+        {
+            try
+            {
+                users = await UserService.FindUsersByNameAsync(newUserName);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error finding user: {ex.Message}");
+            }
+        }
+        else
+        {
+            await LoadUsers();
+        }
+    }
+
+    public async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await AddUser();
+        }
+    }
+}

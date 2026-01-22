@@ -13,6 +13,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<TodoService>();
+builder.Services.AddScoped<UnitService>();
+builder.Services.AddScoped<DepositService>();
+builder.Services.AddScoped<UserService>();
 
 var app = builder.Build();
 
