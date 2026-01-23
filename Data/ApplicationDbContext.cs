@@ -1,16 +1,12 @@
 ﻿using InventoryCRM.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 
 
 namespace InventoryCRM.Data
 {
-    //public class ApplicationDbContext
-    //{
-    // public DbSet<TodoItem> Tasks { get; set; }
-    //}
-
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
