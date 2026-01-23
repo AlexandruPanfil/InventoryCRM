@@ -16,7 +16,7 @@ namespace InventoryCRM.Services
         //For Read
         public async Task<List<User>> GetAllUsersAsync()
         {
-            return await _context.Users
+            return await _context.AppUsers
                 .Include(u => u.Deposit)
                 .OrderBy(d => d.Username).ToListAsync();
         }
@@ -24,13 +24,13 @@ namespace InventoryCRM.Services
         //For Read by Id
         public async Task<User> GetUsersAsync(Guid id)
         {
-            return await _context.Users.FindAsync(id);
+            return await _context.AppUsers.FindAsync(id);
         }
 
         //For Read
         public async Task<List<User>> FindUsersByNameAsync(string username)
         {
-            return await _context.Users
+            return await _context.AppUsers
                 .Where(u => u.Username.Contains(username))
                 .OrderBy(u => u.Username)
                 .ToListAsync();
@@ -43,7 +43,7 @@ namespace InventoryCRM.Services
             {
                 Username = username
             };
-            _context.Users.Add(newUser);
+            _context.AppUsers.Add(newUser);
             await _context.SaveChangesAsync();
 
             var newDeposit = new Deposit
@@ -60,7 +60,7 @@ namespace InventoryCRM.Services
         //For Update
         public async Task<User> UpdateUsersAsync(Guid id, string username)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _context.AppUsers.FindAsync(id);
             if (user != null)
             {
                 user.Username = username;
@@ -72,10 +72,10 @@ namespace InventoryCRM.Services
         //For Delete
         public async Task DeleteUsersAsync(Guid id)
         {
-            var user = await _context.Users.FindAsync(id);
+            var user = await _context.AppUsers.FindAsync(id);
             if (user != null)
             {
-                _context.Users.Remove(user);
+                _context.AppUsers.Remove(user);
                 await _context.SaveChangesAsync();
             }
         }

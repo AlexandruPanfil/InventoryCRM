@@ -1,6 +1,7 @@
 ﻿@page "/todo"
 @using InventoryCRM.Models
 @rendermode InteractiveServer
+@attribute [Authorize]
 
 <h3>You have @todos.Count(todos => !todos.IsCompleted) todo tasks undone</h3>
 

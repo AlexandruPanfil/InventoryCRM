@@ -3,6 +3,7 @@
 @using InventoryCRM.Models
 @inject InventoryCRM.Services.DepositService DepositService
 @rendermode InteractiveServer
+@attribute [Authorize]
 
 <PageTitle>Deposits</PageTitle>
 
@@ -11,7 +12,7 @@
 <div class="mb-3">
     <div class="input-group">
         <input type="text" class="form-control" @bind="depositName"
-               placeholder="Enter the name of deposit" />
+               placeholder="Enter the name of deposit" @onkeyup="HandleKeyPress" />
         <button class="btn btn-primary" @onclick="(FindDeposit)">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" margin="8" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
                 <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
@@ -42,17 +43,29 @@ else
     <div class="list-group">
         @foreach (var deposit in deposits)
         {
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div class="list-group-item  justify-content-between align-items-center">
                 <div @onclick="() => deposit.IsExpanded = !deposit.IsExpanded">
-                    <strong> @(deposit.IsExpanded ? "▼" : "▶") @deposit.Name</strong>
+                    @if (deposit.IsExpanded)
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-caret-down-fill" viewBox="0 0 16 16">
+                            <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z" />
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-caret-right-fill" viewBox="0 0 16 16">
+                            <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
+                        </svg>
+                    }
+                    <strong> @deposit.Name</strong>
                 </div>
                     @if (deposit.IsExpanded)
                     {
-                        <div class="list-group">
+                    <div class="list-group col-*-*">
                             @foreach (var unit in deposit.Unit){
-                                <div class="list-group-item d-flex justify-content-between align-items-center">
-                                    <p><strong>Unit Name:</strong> @unit.Name</p>
-                                    <p><strong>Unit Quantity:</strong> @unit.Quantity</p>
+                                <div class="unit-list-item">
+                                    <span class="me-3"><strong>Unit Name:</strong> @unit.Name</span>
+                                    <span class="me-3"><strong>Unit Quantity:</strong> @unit.Quantity</span>
                                 </div>
                             }
                         </div>
@@ -102,11 +115,11 @@ else
         }
     }
 
-    // public async Task HandleKeyPress(KeyboardEventArgs e)
-    // {
-    //     if (e.Key == "Enter")
-    //     {
-    //         await FindDeposit();
-    //     }
-    // }
+    public async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await FindDeposit();
+        }
+    }
 }

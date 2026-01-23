@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace InventoryCRM.Data
 {
-    public class ApplicationDbContext : IdentityDbContext
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -15,7 +15,7 @@ namespace InventoryCRM.Data
         public DbSet<TodoItem> Todos { get; set; }
         public DbSet<Unit> Units { get; set; }
         public DbSet<Deposit> Deposits { get; set; }
-        public DbSet<User> Users { get; set; }
+        public DbSet<User> AppUsers { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

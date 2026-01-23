@@ -1,0 +1,21 @@
+﻿@* @page "/Account/Logout"
+@using Microsoft.AspNetCore.Identity
+@using InventoryCRM.Data
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager NavigationManager
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (HttpMethods.IsPost(HttpContext.Request.Method))
+        {
+            await SignInManager.SignOutAsync();
+        }
+
+        // Redirect to home after logout
+        NavigationManager.NavigateTo("/");
+    }
+} *@

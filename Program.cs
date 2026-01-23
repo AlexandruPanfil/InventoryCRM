@@ -1,10 +1,12 @@
-using Microsoft.AspNetCore.Components.Authorization;
 using InventoryCRM.Components;
 using InventoryCRM.Components.Login;
 using InventoryCRM.Data;
 using InventoryCRM.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,34 +16,15 @@ builder.Services.AddRazorComponents()
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 
-//builder.Services.AddIdentityApiEndpoints<IdentityUser>()
-//    .AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-//builder.Services.AddScoped<TodoService>();
-//builder.Services.AddScoped<UnitService>();
-//builder.Services.AddScoped<DepositService>();
-//builder.Services.AddScoped<UserService>();
-//builder.Services.AddScoped<IdentityUserAccessor>();
-//builder.Services.AddScoped<IdentityRedirectManager>();
-//builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddScoped<TodoService>();
+builder.Services.AddScoped<UnitService>();
+builder.Services.AddScoped<DepositService>();
+builder.Services.AddScoped<UserService>();
 
-//builder.Services.AddAuthentication(options =>
-//{
-//    options.DefaultScheme = IdentityConstants.ApplicationScheme;
-//    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-//})
-//    .AddIdentityCookies();
-
-//builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
-//    .AddEntityFrameworkStores<ApplicationDbContext>()
-//    .AddSignInManager()
-//    .AddDefaultTokenProviders();
-
-//builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
-builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
@@ -59,8 +42,8 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
+builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
-builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -70,14 +53,25 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
 }
 
+
+app.MapStaticAssets();
+
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.UseAntiforgery();
 
-//app.MapIdentityApi<IdentityUser>();
-app.MapStaticAssets();
+app.MapIdentityApi<ApplicationUser>();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapPost("Account/Logout", async (
+    ClaimsPrincipal user,
+    SignInManager<ApplicationUser> signInManager,
+    [FromForm] string returnUrl) =>
+{
+    await signInManager.SignOutAsync();
+    return TypedResults.LocalRedirect($"~/{returnUrl}");
+});
 
 app.Run();
