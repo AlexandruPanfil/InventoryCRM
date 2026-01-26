@@ -13,14 +13,127 @@
     <div class="input-group">
         <input type="text" class="form-control" @bind="depositName"
                placeholder="Enter the name of deposit" @onkeyup="HandleKeyPress" />
-        <button class="btn btn-primary" @onclick="(FindDeposit)">
+        <button class="btn btn-secondary" @onclick="(FindDeposit)">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" margin="8" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
                 <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
             </svg> 
              Find Deposit
         </button>
+        <button class="btn btn-primary" @onclick="() => isFormVisible = true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-right" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5m14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5"/>
+            </svg>
+            Move Units
+        </button>
     </div>
 </div>
+
+@if (isFormVisible)
+{
+    <div class="modal-backdrop" @onclick="() => ResetForm()"></div>
+
+    <div class="centered-modal">
+        <EditForm Model="updateDeposit" OnValidSubmit="MoveUnitsBetweenDeposits">
+            <div class="mb-3">
+                <h3>Move Units Between Deposits</h3>
+                <button class="btn btn-primary" disabled="@isProcessing" type="submit">
+                    @if (isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm"></span> @:Processing...
+                    }
+                    else
+                    {
+                        <span>Confirm Transfer</span>
+                    }
+                    </button>
+                <button class="btn btn-secondary" type="button" @onclick="() => isSecondFormVisible = true"> Add Unit</button>
+            </div>
+            <button class="btn-close btn-close-black position-absolute top-0 end-0 m-3" type="button" aria-label="Close" @onclick="() => isFormVisible = false"></button>
+            <div>
+                <div class="mb-2">Source Deposit:</div>
+                <InputSelect @bind-Value="sourceDeposit" class="form-control">
+                    <option value="">Select Source Deposit</option>
+                    @foreach (var deposit in deposits)
+                    {
+                        <option value="@deposit.Id">@deposit.Name - @deposit.Id</option>
+                    }
+                </InputSelect>
+            </div>
+            <div>
+                <div class="mb-2">Destination Deposit:</div>
+                <InputSelect @bind-Value="destinationDeposit" class="form-control">
+                    <option value="">Select Destination Deposit</option>
+                    @foreach (var deposit in deposits)
+                    {
+                        if (deposit.Id != sourceDeposit){
+                            <option value="@deposit.Id">@deposit.Name - @deposit.Id</option>
+                        }
+                    }
+                </InputSelect>
+            </div>
+            <div class="list-group">
+                @if(units == null)
+                {
+                    <span> No Units Added</span>
+                }
+                else if(units.Count == 0)
+                {
+                    <span> No Units Added</span>
+                }
+                else
+                {
+                    foreach(var unit in units)
+                    {
+                         <div class="list-group-item  justify-content-between align-items-center">
+                             <div class="unit-list-item row g-3">
+                                        <span class="me-3 col-4"><strong>Unit Name:</strong> @unit.Name</span>
+                                        <span class="me-3 col-4"><strong>Unit Quantity:</strong> @unit.Quantity</span>
+                                        <button class="btn btn-danger col-1" type="button" @onclick="() => units.Remove(unit)">Remove</button>
+                             </div>
+                         </div>
+                    }
+                }
+            </div>
+        </EditForm>
+    </div>
+}
+
+@if (isSecondFormVisible)
+{
+    <div class="modal-second-backdrop" @onclick="() => isSecondFormVisible = false"></div>
+
+    <div class="centered-second-modal">
+        <EditForm Model="newUnit" OnValidSubmit="ConvertUnitsToList">
+            <div class="mb-3">
+                <h3>Move Unit</h3>
+                <button class="btn btn-primary" type="submit">Save</button>
+            </div>
+                <button class="btn-close btn-close-black position-absolute top-0 end-0 m-3" aria-label="Close" @onclick="() => isSecondFormVisible = false"></button>
+            <div>
+            <div class="mb-2">Unit:</div>
+                <InputSelect 
+                    ValueExpression="@(() => unitID)" Value="@unitID" 
+                    ValueChanged="@((Guid id) => OnUnitSelected(id))" 
+                    class="form-control">
+                    <option value="">Select Unit To Transfer</option>
+                    @foreach (var deposit in deposits)
+                    {
+                        if(deposit.Id == sourceDeposit)
+                        {
+                            foreach(var unit in deposit.Unit){
+                            <option value="@unit.Id">@unit.Name - @unit.Id</option> 
+                            }
+                        }  
+                    }
+                </InputSelect>
+            </div>
+            <div>
+                <div class="mb-2">Quantity:</div>
+                <InputNumber @bind-Value="unitQuantity" class="form-control" />
+            </div>
+        </EditForm>
+    </div>
+}
 
 
 @if (deposits == null)
@@ -44,28 +157,34 @@ else
         @foreach (var deposit in deposits)
         {
             <div class="list-group-item  justify-content-between align-items-center">
-                <div @onclick="() => deposit.IsExpanded = !deposit.IsExpanded">
+                <div  @onclick="() => deposit.IsExpanded = !deposit.IsExpanded">
                     @if (deposit.IsExpanded)
                     {
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-caret-down-fill" viewBox="0 0 16 16">
-                            <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z" />
-                        </svg>
+                        <div class="deposit-name-open">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-caret-down-fill" viewBox="0 0 16 16">
+                                <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z" />
+                            </svg>
+                        @deposit.Name
+                        </div>
                     }
                     else
                     {
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-caret-right-fill" viewBox="0 0 16 16">
-                            <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
-                        </svg>
+                        <div class ="deposit-name">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-caret-right-fill" viewBox="0 0 16 16">
+                                <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
+                            </svg>
+                            @deposit.Name
+                        </div>
                     }
-                    <strong> @deposit.Name</strong>
+                    @* <strong> @deposit.Name</strong> *@
                 </div>
                     @if (deposit.IsExpanded)
                     {
                     <div class="list-group col-*-*">
                             @foreach (var unit in deposit.Unit){
-                                <div class="unit-list-item">
-                                    <span class="me-3"><strong>Unit Name:</strong> @unit.Name</span>
-                                    <span class="me-3"><strong>Unit Quantity:</strong> @unit.Quantity</span>
+                            <div class="unit-list-item row g-3">
+                                    <span class="me-3 col-4"><strong>Unit Name:</strong> @unit.Name</span>
+                                    <span class="me-3 col-4"><strong>Unit Quantity:</strong> @unit.Quantity</span>
                                 </div>
                             }
                         </div>
@@ -78,13 +197,27 @@ else
 
 
 @code {
-    private List<Deposit>? deposits;
+    private List<Deposit> deposits = new List<Deposit>();
+    private Deposit updateDeposit = new Deposit();
     private string depositName = string.Empty;
+
+    private string errorMessage = string.Empty;
+    private bool isProcessing;
+    private bool isFormVisible = false;
+    private bool isSecondFormVisible = false;
+
+    private Guid sourceDeposit, destinationDeposit;
+    private List<Unit> units = new List<Unit>();
+    private int unitQuantity = 0;
+    private string unitName = string.Empty;
+    private Guid unitID = Guid.Empty;
+    private Unit newUnit = new Unit();
 
     protected override async Task OnInitializedAsync()
     {
         await LoadDeposits();
     }
+
     private async Task LoadDeposits()
     {
         try
@@ -96,6 +229,7 @@ else
             Console.Error.WriteLine($"Error loading deposits: {ex.Message}");
         }
     }
+
     private async Task FindDeposit()
     {
         if (!string.IsNullOrWhiteSpace(depositName))
@@ -112,6 +246,68 @@ else
         else
         {
             await LoadDeposits();
+        }
+    }
+
+    private void OnUnitSelected(Guid id)
+    {
+        unitID = id;
+
+        var selectedUnit = deposits?
+            .FirstOrDefault(d => d.Id == sourceDeposit)?
+            .Unit.FirstOrDefault(u => u.Id == id);
+
+        if (selectedUnit != null)
+        {
+            unitName = selectedUnit.Name;
+        }
+    }
+
+    private void ConvertUnitsToList()
+    {
+        if (units == null) units = new List<Unit>();
+
+        units.Add(new Unit{
+                    Id = unitID,
+                    Name = unitName,
+                    Quantity = unitQuantity,
+                    DepositId = sourceDeposit
+                });
+
+        unitID = Guid.Empty;
+        unitName = string.Empty;
+        unitQuantity = 0;
+        isSecondFormVisible = false;
+    }
+
+    private void ResetForm()
+    {
+        isFormVisible = false;
+        units.Clear();
+        sourceDeposit = Guid.Empty;
+        destinationDeposit = Guid.Empty;
+    }
+
+    public async Task MoveUnitsBetweenDeposits()
+    {
+        try
+        {
+            isProcessing = true;
+            errorMessage = string.Empty;
+
+            await DepositService.UpdateDepositsUnitsAsync(sourceDeposit, destinationDeposit, units);
+
+            ResetForm();
+
+            await LoadDeposits();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error moving units: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
         }
     }
 
