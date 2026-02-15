@@ -44,6 +44,16 @@ namespace InventoryCRM.Data
                 entity.Property(e=> e.DepositId).IsRequired();
             });
 
+            var defaultDepositId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+            modelBuilder.Entity<Deposit>().HasData(new Deposit
+            {
+                Id = defaultDepositId,
+                Name = "Main Deposit",
+                IsExpanded = false,
+                User = null
+            });
+
             modelBuilder.Entity<Deposit>(entity =>
             {
                 entity.ToTable("Deposits");

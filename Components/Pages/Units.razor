@@ -2,6 +2,7 @@
 @using InventoryCRM.Data
 @using InventoryCRM.Models
 @inject InventoryCRM.Services.UnitService UnitService
+@inject InventoryCRM.Services.DepositService DepositService
 @rendermode InteractiveServer
 @attribute [Authorize]
 
@@ -9,9 +10,17 @@
 
 <h1>Units</h1>
 
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Error!</strong> @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+
 <div class="mb-3">
     <div class="input-group">
-        <input type="text" class="form-control" @bind="unitName"
+        <input type="text" class="form-control" @bind="unitToFind"
                placeholder="Enter the name of unit" />
         <button class="btn btn-secondary" @onclick="(FindUnit)">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" margin="8" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
@@ -19,7 +28,7 @@
             </svg>
             Find Unit
         </button>
-        <button class="btn btn-primary" @onclick="(AddUnit)">
+        <button class="btn btn-primary" @onclick="(OpenCreateUnitForm)">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
                 <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2" />
             </svg>
@@ -62,32 +71,38 @@
     </div>
 }
 
-<style>
-    .modal-backdrop {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0,0,0,0.5);
-        z-index: 1000;
-    }
+@if (isAddQuantityFormVisible)
+{
+    <div class="modal-backdrop" @onclick="() => isAddQuantityFormVisible = false"></div>
 
-    .centered-modal {
-        position: fixed;
-        top: 20%;
-        left: 20%;
-        /* transform: translate(-50%, -50%);  */
-        width: 60vw;
-        height: 70vh;
-        background: white;
-        padding: 2rem;
-        border-radius: 8px;
-        z-index: 1001;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }
-</style>
-
+    <div class="centered-modal">
+        <EditForm Model="newUnit" OnValidSubmit="AddUnitQuantity">
+            <div class="mb-3">
+                <h3>Add Quantity To Unit</h3>
+                <button class="btn btn-primary" type="submit">Save</button>
+            </div>
+            <button class="btn-close btn-close-black position-absolute top-0 end-0 m-3" aria-label="Close" @onclick="() => isAddQuantityFormVisible = false"></button>
+            <div>
+                <div class="mb-2">Name:</div>
+                <InputText @bind-Value="unitName" class="form-control" readonly />
+            </div>
+            <div>
+                <div class="mb-2">Quantity:</div>
+                <InputNumber @bind-Value="unitQuantity" class="form-control" />
+            </div>
+            <div>
+                <div class="mb-2">Deposit:</div>
+                <InputSelect @bind-Value="unitDepositId" class="form-control">
+                    <option value="">Select Deposit</option>
+                    @foreach (var deposit in deposits)
+                    {
+                        <option value="@deposit.Id">@deposit.Name - @deposit.Id</option>
+                    }
+                </InputSelect>
+            </div>
+        </EditForm>
+    </div>
+}
 
 @if (units == null)
 {
@@ -114,6 +129,12 @@ else
                     <strong>@unit.Name</strong>
                     <small class="text-muted"> (@unit.Quantity)</small>
                 </div>
+                <button type="button" class="btn btn-link p-0 minimalist-plus-btn" @onclick="() => OpenAddQuantityForm(unit)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-plus-circle" viewBox="0 0 16 16">
+                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4" />
+                    </svg>
+                </button>
             </div>
         }
     </div>
@@ -123,13 +144,19 @@ else
 @code {
     private List<Unit>? units;
     private List<Deposit>? deposits;
+    private string? errorMessage;
+
+    private string unitToFind = string.Empty;
 
     private Unit newUnit = new Unit();
+    private Guid unitId = Guid.Empty;
     private string unitName = string.Empty;
     private int unitQuantity = 0;
     private Guid unitDepositId = Guid.Empty;
+    private Guid unitDefaultDepositId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
     private bool isFormVisible = false;
+    private bool isAddQuantityFormVisible = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -140,7 +167,7 @@ else
     {
         try
         {
-            units = await UnitService.GetAllUnitsAsync();
+            units = await UnitService.GetAllUnitsNameAndQuantityAsync();
             deposits = await UnitService.GetDepositIdAsync();
         }
         catch (Exception ex)
@@ -149,19 +176,42 @@ else
         }
     }
 
-    private async Task AddUnit()
+    private async Task OpenCreateUnitForm()
     {
         isFormVisible = true;
+        unitDepositId = unitDefaultDepositId;
     }
 
     private async Task CreateUnit()
     {
+        if (string.IsNullOrWhiteSpace(unitName))
+        {
+            errorMessage = "You must enter a name before saving.";
+            return;
+        }
+
         try
         {
             await UnitService.CreateUnitsAsync(unitName, unitQuantity, unitDepositId);
             unitName = string.Empty;
             unitQuantity = 0;
-            unitDepositId = Guid.Empty;
+            // unitDepositId = Guid.Empty;
+            await LoadUnits();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error creating unit: {ex.Message}");
+        }
+    }
+
+    private async Task UpdateUnit()
+    {
+        try
+        {
+            await UnitService.UpdateUnitAsync(unitId, unitName, unitQuantity);
+            unitId = Guid.Empty;
+            unitName = string.Empty;
+            unitQuantity = 0;
             await LoadUnits();
         }
         catch (Exception ex)
@@ -172,11 +222,11 @@ else
 
     private async Task FindUnit()
     {
-        if (!string.IsNullOrWhiteSpace(unitName))
+        if (!string.IsNullOrWhiteSpace(unitToFind))
         {
             try
             {
-                units = await UnitService.FindUnitsAsync(unitName);
+                units = await UnitService.FindUnitsAsync(unitToFind);
             }
             catch (Exception ex)
             {
@@ -187,5 +237,40 @@ else
         {
             await LoadUnits();
         }
+    }
+
+    private async Task OpenAddQuantityForm(Unit unit)
+    {
+        unitId = unit.Id;
+        unitName = unit.Name;
+        unitQuantity = 0;
+        unitDepositId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+
+        isAddQuantityFormVisible = true;
+    }
+
+    private async Task AddUnitQuantity()
+    {
+        // Implement the logic to add quantity to the unit
+        // This could involve showing a modal to input the quantity to add
+        // and then calling a service method to update the unit's quantity
+
+        bool isUnitInDeposit = await UnitService.IsUnitInDepositAsync(unitId, unitDepositId);
+        Unit rawUnit = await UnitService.GetUnitsAsync(unitId);
+        int rawQuantity = rawUnit.Quantity;
+
+        Console.WriteLine($"Is unit in deposit: {isUnitInDeposit}");
+
+        if (isUnitInDeposit)
+        {
+            unitQuantity += rawQuantity;
+            UpdateUnit();
+        }
+        else
+        {
+            CreateUnit();
+        }
+
     }
 }

@@ -20,6 +20,30 @@ namespace InventoryCRM.Services
             return await _context.Units.OrderBy(u => u.Name).ToListAsync();
         }
 
+        // For getting all units name by quantity
+        public async Task<List<Unit>> GetAllUnitsNameAndQuantityAsync()
+        {
+            var rawUnits =  _context.Units.OrderBy(u => u.Name).ToListAsync();
+            var units = new List<Unit>();
+            foreach (var unit in await rawUnits)
+            {
+                if (!units.Any(u => u.Name == unit.Name))
+                {
+                    units.Add(new Unit
+                    {
+                        Id = unit.Id,
+                        Name = unit.Name,
+                        Quantity = unit.Quantity
+                    });
+                }
+                else
+                {
+                    units.Where(u => u.Name == unit.Name).FirstOrDefault()!.Quantity += unit.Quantity;
+                }
+            }
+            return units;
+        }
+
         // For getting an units
         public async Task<Unit> GetUnitsAsync(Guid id)
         {
@@ -80,5 +104,14 @@ namespace InventoryCRM.Services
                 .ToListAsync();
         }
 
+        public async Task<bool> IsUnitInDepositAsync(Guid unitId, Guid depositID)
+        {
+            var unit = await _context.Units.FindAsync(unitId);
+            if (unit != null && unit.DepositId == depositID)
+            {
+                return true;
+            }
+            return false;
+        }
     }
 }

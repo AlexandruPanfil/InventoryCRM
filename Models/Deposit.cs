@@ -11,8 +11,8 @@
         public ICollection<Unit> Unit { get; set; }
 
         // Foreign key to User
-        public Guid UserId { get; set; }
-        public User User { get; set; } = null!;
+        public Guid? UserId { get; set; }
+        public User User { get; set; }
 
     }
 }
