@@ -4,6 +4,7 @@ using InventoryCRM.Data;
 using InventoryCRM.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -38,11 +39,16 @@ builder.Services.AddAuthentication(options =>
 
 // This is the ONE main registration you need. 
 // Note: We use ApplicationUser here to match your Account components.
-builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = false)
+builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+
+
+//builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("MailSettings"));
+builder.Services.AddSingleton<IEmailSender<ApplicationUser>, SmtpEmailSender>();
+//builder.Services.AddTransient<IEmailSender<ApplicationUser>, SmtpEmailSender>();
 
 
 var app = builder.Build();

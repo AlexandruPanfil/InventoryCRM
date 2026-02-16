@@ -176,7 +176,7 @@ else
         }
     }
 
-    private async Task OpenCreateUnitForm()
+    private void OpenCreateUnitForm()
     {
         isFormVisible = true;
         unitDepositId = unitDefaultDepositId;
@@ -239,7 +239,7 @@ else
         }
     }
 
-    private async Task OpenAddQuantityForm(Unit unit)
+    private void OpenAddQuantityForm(Unit unit)
     {
         unitId = unit.Id;
         unitName = unit.Name;
@@ -265,11 +265,11 @@ else
         if (isUnitInDeposit)
         {
             unitQuantity += rawQuantity;
-            UpdateUnit();
+            await UpdateUnit();
         }
         else
         {
-            CreateUnit();
+            await CreateUnit();
         }
 
     }
