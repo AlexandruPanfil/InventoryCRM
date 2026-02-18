@@ -4,9 +4,11 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using InventoryCRM.Data
+@using InventoryCRM.Services
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityRedirectManager RedirectManager
+@inject UserService UserService
 
 <PageTitle>Confirm email</PageTitle>
 
@@ -42,7 +44,28 @@
         {
             var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
             var result = await UserManager.ConfirmEmailAsync(user, code);
-            statusMessage = result.Succeeded ? "Thank you for confirming your email." : "Error confirming your email.";
+            
+            if (result.Succeeded)
+            {
+                // Assign default role
+                await UserManager.AddToRoleAsync(user, "User");
+
+                // Create the custom User record if it doesn't exist
+                if (Guid.TryParse(user.Id, out var userGuid))
+                {
+                    var existingUser = await UserService.GetUsersAsync(userGuid);
+                    if (existingUser == null)
+                    {
+                        await UserService.CreateUsersAsync(user.Email ?? user.UserName ?? "Unknown", userGuid);
+                    }
+                }
+                
+                statusMessage = "Thank you for confirming your email.";
+            }
+            else
+            {
+                statusMessage = "Error confirming your email.";
+            }
         }
     }
 }

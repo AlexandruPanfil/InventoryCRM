@@ -1,0 +1,178 @@
+@page "/admin/user-roles"
+@using InventoryCRM.Data
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@attribute [Authorize(Roles = "Admin")]
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+@inject ILogger<UserRoles> Logger
+
+<PageTitle>User Role Management</PageTitle>
+
+<h1>User Role Management</h1>
+
+@if (users == null)
+{
+    <p><em>Loading users...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Roles</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.Email</td>
+                    <td>
+                        @if (userRoles != null && userRoles.TryGetValue(user.Id, out var rolesForUser))
+                        {
+                            @string.Join(", ", rolesForUser)
+                        }
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" @onclick="() => ShowEditRolesModal(user)">Edit Roles</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Roles for @selectedUser?.Email</h5>
+                    <button type="button" class="close" @onclick="HideEditRolesModal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    @if (allRoles != null)
+                    {
+                        @foreach (var role in allRoles)
+                        {
+                            <div class="form-check">
+                                <input type="checkbox"
+                                       class="form-check-input"
+                                       id="role-@role.Id"
+                                       checked="@(selectedUserRoles.Contains(role.Name))"
+                                       @onclick="() => ToggleUserRole(role.Name)" />
+                                <label class="form-check-label" for="role-@role.Id">@role.Name</label>
+                            </div>
+                        }
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="HideEditRolesModal">Close</button>
+                    <button type="button" class="btn btn-primary" @onclick="UpdateUserRoles">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ApplicationUser>? users;
+    private Dictionary<string, IList<string>>? userRoles;
+    private List<IdentityRole>? allRoles;
+    private ApplicationUser? selectedUser;
+    private List<string> selectedUserRoles = new();
+    private bool showModal = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        users = await UserManager.Users.OrderBy(u => u.Email).ToListAsync();
+        allRoles = await RoleManager.Roles.OrderBy(r => r.Name).ToListAsync();
+        userRoles = new Dictionary<string, IList<string>>();
+
+        if (users != null)
+        {
+            foreach (var user in users)
+            {
+                userRoles[user.Id] = await UserManager.GetRolesAsync(user);
+            }
+        }
+    }
+
+    private void ShowEditRolesModal(ApplicationUser user)
+    {
+        selectedUser = user;
+        selectedUserRoles = userRoles != null && userRoles.TryGetValue(user.Id, out var roles)
+            ? new List<string>(roles)
+            : new List<string>();
+        showModal = true;
+    }
+
+    private void HideEditRolesModal()
+    {
+        showModal = false;
+        selectedUser = null;
+        selectedUserRoles.Clear();
+    }
+
+    private void ToggleUserRole(string roleName)
+    {
+        if (selectedUserRoles.Contains(roleName))
+        {
+            selectedUserRoles.Remove(roleName);
+        }
+        else
+        {
+            selectedUserRoles.Add(roleName);
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task UpdateUserRoles()
+    {
+        if (selectedUser == null) return;
+
+        var currentRoles = await UserManager.GetRolesAsync(selectedUser);
+        var rolesToRemove = currentRoles.Except(selectedUserRoles).ToList();
+        var rolesToAdd = selectedUserRoles.Except(currentRoles).ToList();
+
+        if (rolesToRemove.Any())
+        {
+            var removeResult = await UserManager.RemoveFromRolesAsync(selectedUser, rolesToRemove);
+            if (removeResult.Succeeded)
+            {
+                Logger.LogInformation("Successfully removed roles {Roles} from user {UserId}", string.Join(", ", rolesToRemove), selectedUser.Id);
+            }
+            else
+            {
+                Logger.LogError("Error removing roles {Roles} from user {UserId}: {Errors}", string.Join(", ", rolesToRemove), selectedUser.Id, string.Join(", ", removeResult.Errors.Select(e => e.Description)));
+            }
+        }
+        if (rolesToAdd.Any())
+        {
+            var addResult = await UserManager.AddToRolesAsync(selectedUser, rolesToAdd);
+            if (addResult.Succeeded)
+            {
+                Logger.LogInformation("Successfully added roles {Roles} to user {UserId}", string.Join(", ", rolesToAdd), selectedUser.Id);
+            }
+            else
+            {
+                Logger.LogError("Error adding roles {Roles} to user {UserId}: {Errors}", string.Join(", ", rolesToAdd), selectedUser.Id, string.Join(", ", addResult.Errors.Select(e => e.Description)));
+            }
+        }
+
+        await LoadData(); // Reload data after changes
+        HideEditRolesModal();
+    }
+}

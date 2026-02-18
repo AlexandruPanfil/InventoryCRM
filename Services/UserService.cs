@@ -37,12 +37,18 @@ namespace InventoryCRM.Services
         }
 
         //For Create
-        public async Task<User> CreateUsersAsync(string username)
+        public async Task<User> CreateUsersAsync(string username, Guid? userId = null)
         {
             var newUser = new User
             {
                 Username = username
             };
+
+            if (userId.HasValue)
+            {
+                newUser.Id = userId.Value;
+            }
+
             _context.AppUsers.Add(newUser);
             await _context.SaveChangesAsync();
 

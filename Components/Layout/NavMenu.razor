@@ -55,6 +55,18 @@
             </NavLink>
         </div>
 
+        <AuthorizeView Roles="Admin">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin/user-roles">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-gear" viewBox="0 0 16 16">
+                            <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4m.256 7-3.659-.619c-.066-.011-.13-.03-.195-.054C3.792 13.564 3 13.107 3 12.5v-.5c0-.12.01-.244.026-.372.335-.676 1.1-.962 1.803-1.018a4 4 0 0 1 1.1-.022l.023.001c.002.001.004.002.006.003h.002A6.5 6.5 0 0 0 8 10.101V7.766a3.5 3.5 0 1 1-1.127 0 .5.5 0 0 1-.035-.127l-.004-.031-.002-.014A.54.54 0 0 1 6.5 7h-1C4.604 7 3 9.335 3 12v.5c0 .7.689 1.167 1.29 1.45.31.144.64.27 1.01.378Zm7-2.5a.5.5 0 0 0-.5-.5h-2.5a.5.5 0 0 0 0 1H15a.5.5 0 0 0 .5-.5" />
+                        </svg>
+                        User Role Management
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
 
         <AuthorizeView>
             <Authorized>
