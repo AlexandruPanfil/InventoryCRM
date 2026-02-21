@@ -44,6 +44,20 @@ namespace InventoryCRM.Services
             return units;
         }
 
+        // For getting deposits by unit name
+        public async Task<List<Deposit>> GetDepositsByUnitNameAsync(string unitName)
+        {
+            if (string.IsNullOrWhiteSpace(unitName))
+                return new List<Deposit>();
+
+            var nameLower = unitName.Trim().ToLowerInvariant();
+
+            // Return all units that match the name, and include their deposits
+            return await _context.Deposits
+                .Where(d => d.Unit.Any(u => u.Name.ToLower() == nameLower))
+                .ToListAsync();
+        }
+
         // For getting an units
         public async Task<Unit> GetUnitsAsync(Guid id)
         {

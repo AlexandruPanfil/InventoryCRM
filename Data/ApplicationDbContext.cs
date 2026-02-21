@@ -42,6 +42,7 @@ namespace InventoryCRM.Data
                     .HasColumnType("varchar(100)")
                     .IsRequired();
                 entity.Property(e=> e.DepositId).IsRequired();
+                entity.Ignore(e => e.IsExpanded);
             });
 
             var defaultDepositId = Guid.Parse("00000000-0000-0000-0000-000000000001");

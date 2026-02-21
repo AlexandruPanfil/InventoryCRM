@@ -18,6 +18,31 @@
     border-bottom: 1px solid #495057;
 }
 
+.table-fixed {
+    table-layout: fixed;
+    width: 100%;
+}
+
+    .table-fixed th,
+    .table-fixed td {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+.col-name {
+    width: 50%;
+}
+
+.col-quantity {
+    width: 25%;
+}
+
+.col-actions {
+    width: 15%;
+    text-align: right;
+}
 
 .modal-backdrop {
     position: fixed;

@@ -52,6 +52,23 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, SmtpEmailSender>();
 //builder.Services.AddTransient<IEmailSender<ApplicationUser>, SmtpEmailSender>();
 
 
+builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("Advanced", policy =>
+            policy.RequireRole("Admin", "Manager"));
+    });
+builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("All", policy =>
+            policy.RequireRole("Admin", "Manager", "Deposit", "User"));
+    });
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("CanMoveUnits", policy =>
+        policy.RequireRole("Admin", "Manager", "Deposit"));
+});
+
+
 var app = builder.Build();
 
 // Seed Roles

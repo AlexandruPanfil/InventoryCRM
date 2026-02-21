@@ -1,7 +1,10 @@
 ﻿@page "/deposits"
 @using InventoryCRM.Data
 @using InventoryCRM.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @inject InventoryCRM.Services.DepositService DepositService
+@inject IAuthorizationService AuthorizationService
 @rendermode InteractiveServer
 @attribute [Authorize]
 
@@ -19,12 +22,20 @@
             </svg> 
              Find Deposit
         </button>
-        <button class="btn btn-primary" @onclick="() => isFormVisible = true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-right" viewBox="0 0 16 16">
-                <path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5m14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5"/>
-            </svg>
-            Move Units
-        </button>
+
+        <AuthorizeView Policy="CanMoveUnits">
+            <Authorized>
+                <button class="btn btn-primary" @onclick="() => isFormVisible = true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-right" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5m14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5"/>
+                    </svg>
+                    Move Units
+                </button>
+            </Authorized>
+            @* <NotAuthorized>
+                <button class="btn btn-primary" disabled title="Недостаточно прав">Move Units</button>
+            </NotAuthorized> *@
+        </AuthorizeView>
     </div>
 </div>
 
@@ -36,18 +47,27 @@
         <EditForm Model="updateDeposit" OnValidSubmit="MoveUnitsBetweenDeposits">
             <div class="mb-3">
                 <h3>Move Units Between Deposits</h3>
-                <button class="btn btn-primary" disabled="@isProcessing" type="submit">
-                    @if (isProcessing)
-                    {
-                        <span class="spinner-border spinner-border-sm"></span> @:Processing...
-                    }
-                    else
-                    {
-                        <span>Confirm Transfer</span>
-                    }
-                    </button>
-                <button class="btn btn-secondary" type="button" @onclick="() => isSecondFormVisible = true"> Add Unit</button>
+
+                <AuthorizeView Policy="CanMoveUnits" Context="authContext">
+                    <Authorized>
+                        <button class="btn btn-primary" disabled="@isProcessing" type="submit">
+                            @if (isProcessing)
+                            {
+                                <span class="spinner-border spinner-border-sm"></span> @:Processing...
+                            }
+                            else
+                            {
+                                <span>Confirm Transfer</span>
+                            }
+                        </button>
+                        <button class="btn btn-secondary" type="button" @onclick="() => isSecondFormVisible = true"> Add Unit</button>
+                    </Authorized>
+                    <NotAuthorized>
+                        <button class="btn btn-secondary" disabled title="Недостаточно прав">Confirm Transfer</button>
+                    </NotAuthorized>
+                </AuthorizeView>
             </div>
+            
             <button class="btn-close btn-close-black position-absolute top-0 end-0 m-3" type="button" aria-label="Close" @onclick="() => isFormVisible = false"></button>
             <div>
                 <div class="mb-2">Source Deposit:</div>
@@ -176,18 +196,35 @@ else
                             @deposit.Name
                         </div>
                     }
-                    @* <strong> @deposit.Name</strong> *@
                 </div>
                     @if (deposit.IsExpanded)
                     {
                     <div class="list-group col-*-*">
-                            @foreach (var unit in deposit.Unit){
-                            <div class="unit-list-item row g-3">
-                                    <span class="me-3 col-4"><strong>Unit Name:</strong> @unit.Name</span>
-                                    <span class="me-3 col-4"><strong>Unit Quantity:</strong> @unit.Quantity</span>
-                                </div>
-                            }
-                        </div>
+                        <table class="table table-sm mb-2 table-fixed">
+                            <colgroup>
+                                <col class="col-name" />
+                                <col class="col-quantity" />
+                                <col class="col-actions" />
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>Unit Name</th>
+                                    <th>Unit Quantity</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var unit in deposit.Unit)
+                                {
+                                    <tr>
+                                        <td class="text-truncate">@unit.Name</td>
+                                        <td>@unit.Quantity</td>
+                                        <td></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                     }
             </div> 
         }
@@ -197,6 +234,8 @@ else
 
 
 @code {
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
     private List<Deposit> deposits = new List<Deposit>();
     private Deposit updateDeposit = new Deposit();
     private string depositName = string.Empty;
@@ -213,9 +252,15 @@ else
     private Guid unitID = Guid.Empty;
     private Unit newUnit = new Unit();
 
+    private bool canMoveUnits;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadDeposits();
+
+        // Determine if current user can move units (UI-friendly flag)
+        var authState = await authenticationStateTask;
+        canMoveUnits = (await AuthorizationService.AuthorizeAsync(authState.User, "CanMoveUnits")).Succeeded;
     }
 
     private async Task LoadDeposits()
@@ -290,6 +335,17 @@ else
 
     public async Task MoveUnitsBetweenDeposits()
     {
+        // server-side authorization check to prevent bypassing the UI
+        var authState = await authenticationStateTask;
+        var isAuthorized = (await AuthorizationService.AuthorizeAsync(authState.User, "CanMoveUnits")).Succeeded;
+
+        if (!isAuthorized)
+        {
+            errorMessage = "You do not have permission to move units.";
+            isProcessing = false;
+            return;
+        }
+
         try
         {
             isProcessing = true;

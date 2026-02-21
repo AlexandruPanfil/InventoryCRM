@@ -1,8 +1,11 @@
 ﻿@page "/units"
 @using InventoryCRM.Data
 @using InventoryCRM.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @inject InventoryCRM.Services.UnitService UnitService
 @inject InventoryCRM.Services.DepositService DepositService
+@inject IAuthorizationService AuthorizationService
 @rendermode InteractiveServer
 @attribute [Authorize]
 
@@ -28,12 +31,16 @@
             </svg>
             Find Unit
         </button>
-        <button class="btn btn-primary" @onclick="(OpenCreateUnitForm)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
-                <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2" />
-            </svg>
-             Create Unit
-        </button>
+        <AuthorizeView Policy="CanMoveUnits">
+            <Authorized>
+                <button class="btn btn-primary" @onclick="(OpenCreateUnitForm)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2" />
+                    </svg>
+                     Create Unit
+                </button>
+            </Authorized>
+        </AuthorizeView>
     </div>
 </div>
 
@@ -61,7 +68,7 @@
                 <div class="mb-2">Deposit:</div>
                 <InputSelect @bind-Value="unitDepositId" class="form-control">
                     <option value="">Select Deposit</option>
-                    @foreach (var deposit in deposits)
+                    @foreach (var deposit in allDeposits)
                     {
                         <option value="@deposit.Id">@deposit.Name - @deposit.Id</option>
                     }
@@ -94,7 +101,7 @@
                 <div class="mb-2">Deposit:</div>
                 <InputSelect @bind-Value="unitDepositId" class="form-control">
                     <option value="">Select Deposit</option>
-                    @foreach (var deposit in deposits)
+                    @foreach (var deposit in allDeposits)
                     {
                         <option value="@deposit.Id">@deposit.Name - @deposit.Id</option>
                     }
@@ -129,12 +136,16 @@ else
                     <strong>@unit.Name</strong>
                     <small class="text-muted"> (@unit.Quantity)</small>
                 </div>
+                <AuthorizeView Policy="CanMoveUnits">
+            <Authorized>
                 <button type="button" class="btn btn-link p-0 minimalist-plus-btn" @onclick="() => OpenAddQuantityForm(unit)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-plus-circle" viewBox="0 0 16 16">
                         <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
                         <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4" />
                     </svg>
                 </button>
+                    </Authorized>
+                </AuthorizeView>
             </div>
         }
     </div>
@@ -142,8 +153,11 @@ else
 
 
 @code {
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+    private bool canMoveUnits;
+
     private List<Unit>? units;
-    private List<Deposit>? deposits;
+    private List<Deposit>? allDeposits;
     private string? errorMessage;
 
     private string unitToFind = string.Empty;
@@ -153,7 +167,7 @@ else
     private string unitName = string.Empty;
     private int unitQuantity = 0;
     private Guid unitDepositId = Guid.Empty;
-    private Guid unitDefaultDepositId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+    private static readonly Guid unitDefaultDepositId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
     private bool isFormVisible = false;
     private bool isAddQuantityFormVisible = false;
@@ -161,6 +175,9 @@ else
     protected override async Task OnInitializedAsync()
     {
         await LoadUnits();
+
+        var authState = await authenticationStateTask;
+        canMoveUnits = (await AuthorizationService.AuthorizeAsync(authState.User, "CanMoveUnits")).Succeeded;
     }
 
     private async Task LoadUnits()
@@ -168,7 +185,7 @@ else
         try
         {
             units = await UnitService.GetAllUnitsNameAndQuantityAsync();
-            deposits = await UnitService.GetDepositIdAsync();
+            allDeposits = await UnitService.GetDepositIdAsync();
         }
         catch (Exception ex)
         {
@@ -184,6 +201,15 @@ else
 
     private async Task CreateUnit()
     {
+        var authState = await authenticationStateTask;
+        var isAuthorized = (await AuthorizationService.AuthorizeAsync(authState.User, "CanMoveUnits")).Succeeded;
+
+        if (!isAuthorized)
+        {
+            errorMessage = "You do not have permission to move units.";
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(unitName))
         {
             errorMessage = "You must enter a name before saving.";
@@ -195,7 +221,6 @@ else
             await UnitService.CreateUnitsAsync(unitName, unitQuantity, unitDepositId);
             unitName = string.Empty;
             unitQuantity = 0;
-            // unitDepositId = Guid.Empty;
             await LoadUnits();
         }
         catch (Exception ex)
@@ -239,8 +264,17 @@ else
         }
     }
 
-    private void OpenAddQuantityForm(Unit unit)
+    private async void OpenAddQuantityForm(Unit unit)
     {
+        var authState =  await authenticationStateTask;
+        var isAuthorized = (await AuthorizationService.AuthorizeAsync(authState.User, "CanMoveUnits")).Succeeded;
+
+        if (!isAuthorized)
+        {
+            errorMessage = "You do not have permission to move units.";
+            return;
+        }
+
         unitId = unit.Id;
         unitName = unit.Name;
         unitQuantity = 0;

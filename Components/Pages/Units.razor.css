@@ -21,3 +21,12 @@
     z-index: 1001;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
+
+.unit-name {
+/*    font-size: x-large;*/
+}
+
+.unit-name-open {
+/*    font-size: x-large;*/
+    border-bottom: 1px solid #495057;
+}

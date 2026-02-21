@@ -22,17 +22,23 @@
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="users">
-                @* <span class="bi bi-person-nav-menu " aria-hidden="true"></span> *@
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-person" viewBox="0 0 16 16">
-                    <path d="M11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0" />
-                    <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2v9.255S12 12 8 12s-5 1.755-5 1.755V2a1 1 0 0 1 1-1h5.5z" />
-                </svg>
-                Users
-            </NavLink>
-        </div>
+        <AuthorizeView Policy="Advanced">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="users">
+                        @* <span class="bi bi-person-nav-menu " aria-hidden="true"></span> *@
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-person" viewBox="0 0 16 16">
+                            <path d="M11 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0" />
+                            <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2v9.255S12 12 8 12s-5 1.755-5 1.755V2a1 1 0 0 1 1-1h5.5z" />
+                        </svg>
+                        Users
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
 
+        <AuthorizeView Policy="All">
+            <Authorized>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="deposits">
                 @* <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span>  *@
@@ -44,7 +50,11 @@
                 Deposits
             </NavLink>
         </div>
+            </Authorized>
+        </AuthorizeView>
 
+        <AuthorizeView Policy="All">
+            <Authorized>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="units" Match="NavLinkMatch.All">
                 @* <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span>  *@
@@ -54,13 +64,19 @@
                 Units
             </NavLink>
         </div>
+        </Authorized>
+        </AuthorizeView>
 
         <AuthorizeView Roles="Admin">
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="admin/user-roles">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-gear" viewBox="0 0 16 16">
+                        @* <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-gear" viewBox="0 0 16 16">
                             <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4m.256 7-3.659-.619c-.066-.011-.13-.03-.195-.054C3.792 13.564 3 13.107 3 12.5v-.5c0-.12.01-.244.026-.372.335-.676 1.1-.962 1.803-1.018a4 4 0 0 1 1.1-.022l.023.001c.002.001.004.002.006.003h.002A6.5 6.5 0 0 0 8 10.101V7.766a3.5 3.5 0 1 1-1.127 0 .5.5 0 0 1-.035-.127l-.004-.031-.002-.014A.54.54 0 0 1 6.5 7h-1C4.604 7 3 9.335 3 12v.5c0 .7.689 1.167 1.29 1.45.31.144.64.27 1.01.378Zm7-2.5a.5.5 0 0 0-.5-.5h-2.5a.5.5 0 0 0 0 1H15a.5.5 0 0 0 .5-.5" />
+                        </svg> *@
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-rolodex" viewBox="0 0 16 16">
+                            <path d="M8 9.05a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5" />
+                            <path d="M1 1a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h.5a.5.5 0 0 0 .5-.5.5.5 0 0 1 1 0 .5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5.5.5 0 0 1 1 0 .5.5 0 0 0 .5.5h.5a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H6.707L6 1.293A1 1 0 0 0 5.293 1zm0 1h4.293L6 2.707A1 1 0 0 0 6.707 3H15v10h-.085a1.5 1.5 0 0 0-2.4-.63C11.885 11.223 10.554 10 8 10c-2.555 0-3.886 1.224-4.514 2.37a1.5 1.5 0 0 0-2.4.63H1z" />
                         </svg>
                         User Role Management
                     </NavLink>
