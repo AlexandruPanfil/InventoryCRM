@@ -1,0 +1,238 @@
+﻿@page "/orders"
+@using InventoryCRM.Data
+@using InventoryCRM.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject InventoryCRM.Services.OrderService OrderService
+@inject InventoryCRM.Services.CustomerService CustomerService
+@inject IAuthorizationService AuthorizationService
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+<PageTitle>Customers</PageTitle>
+<h3>Orders</h3>
+
+<div class="mb-3">
+    <div class="input-group">
+        <input type="text" class="form-control" @bind="filteredName"
+               placeholder="Enter the name of customer" />
+        <button class="btn btn-secondary" @onclick="(FindByName)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" margin="8" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+            </svg>
+            Find Customer
+        </button>
+        <AuthorizeView Policy="Advanced">
+            <Authorized>
+                <button class="btn btn-primary" @onclick="() => isFormVisible = true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2" />
+                    </svg>
+                    Create Customer
+                </button>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+</div>
+
+@if (isFormVisible)
+{
+    <div class="modal-backdrop" @onclick="() => isFormVisible = false"></div>
+
+    <div class="centered-modal">
+        <EditForm Model="newOrder" OnValidSubmit="CreateOrder">
+            <div class="mb-3">
+                <h3>Create New Customer</h3>
+                <button class="btn btn-primary" type="submit">Save</button>
+                <button class="btn btn-secondary" type="button" @onclick="() => isSecondFormVisible = true"> Add Unit</button>
+            </div>
+            <button class="btn-close btn-close-black position-absolute top-0 end-0 m-3" aria-label="Close" @onclick="() => isFormVisible = false"></button>
+            <div>
+                <div class="mb-2">Customer</div>
+                <InputSelect @bind-Value="selectedCustomer" class="form-control">
+                    <option value="">Select Customer</option>
+                    @foreach (var customer in customers)
+                    {
+                        <option value="@customer.Id">@customer.Name - @customer.Id</option>
+                    }
+                </InputSelect>
+            </div>
+            <div>
+                <div class="mb-2">Name:</div>
+                <InputText @bind-Value="newDescription" class="form-control" />
+            </div>
+            <div class="list-group">
+                @if (units == null)
+                {
+                    <span> No Units Added</span>
+                }
+                else if (units.Count == 0)
+                {
+                    <span> No Units Added</span>
+                }
+                else
+                {
+                    foreach (var unit in units)
+                    {
+                        <div class="list-group-item  justify-content-between align-items-center">
+                            <div class="unit-list-item row g-3">
+                                <span class="me-3 col-4"><strong>Unit Name:</strong> @unit.Name</span>
+                                <span class="me-3 col-4"><strong>Unit Quantity:</strong> @unit.Quantity</span>
+                                <button class="btn btn-danger col-1" type="button" @onclick="() => units.Remove(unit)">Remove</button>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </EditForm>
+    </div>
+}
+
+
+@if (isSecondFormVisible)
+{
+    <div class="modal-second-backdrop" @onclick="() => isSecondFormVisible = false"></div>
+
+    <div class="centered-second-modal">
+        <EditForm Model="newUnit" OnValidSubmit="ConvertUnitsToList">
+            <div class="mb-3">
+                <h3>Move Unit</h3>
+                <button class="btn btn-primary" type="submit">Save</button>
+            </div>
+            <button class="btn-close btn-close-black position-absolute top-0 end-0 m-3" aria-label="Close" @onclick="() => isSecondFormVisible = false"></button>
+            <div>
+                <div class="mb-2">Unit:</div>
+                <InputSelect @bind-Value="unitID" class="form-control">
+                    <option value="">Select Customer</option>
+                    @foreach (var unit in units)
+                    {
+                        <option value="@unit.Id">@unit.Name - @unit.Quantity</option>
+                    }
+                </InputSelect>
+            </div>
+            <div>
+                <div class="mb-2">Quantity:</div>
+                <InputNumber @bind-Value="unitQuantity" class="form-control" />
+            </div>
+        </EditForm>
+    </div>
+}
+
+@if (orders == null)
+{
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p><em>Loading customers...</em></p>
+    </div>
+}
+else if (orders.Count == 0)
+{
+    <div class="text-center">
+        <p><em>There is no customers, You can create a new one</em></p>
+    </div>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var order in orders)
+        {
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>@order.Status - @order.Customers.Name - @order.CreatedAt</strong>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+    private List<Order> orders;
+
+    private Order newOrder = new Order();
+    private string newDescription = string.Empty;
+
+    private List<Customer> customers = new List<Customer>();
+    private string selectedCustomer = string.Empty;
+    // private Customer selectedCustomer = new Customer();
+
+    private List<Unit> units = new List<Unit>();
+    private List<Unit> selectedUnits = new List<Unit>();
+    private Unit newUnit = new Unit();
+    private Guid unitID = Guid.Empty;
+    private string unitName = string.Empty;
+    private int unitQuantity = 0;
+    private static readonly Guid unitDefaultDepositId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+
+    private string filteredName = string.Empty;
+    private bool isFormVisible = false;
+    private bool isSecondFormVisible = false;
+
+    private bool advanced = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+        var authState = await authenticationStateTask;
+        advanced = (await AuthorizationService.AuthorizeAsync(authState.User, "Advanced")).Succeeded;
+    }
+
+    private async Task LoadOrders()
+    {
+        orders = await OrderService.GetAllOrdersAsync();
+        customers = await CustomerService.GetAllCustomersAsync();
+    }
+
+    private async Task FindByName()
+    {
+        if (string.IsNullOrWhiteSpace(filteredName))
+        {
+            await LoadOrders();
+        }
+        else
+        {
+            orders = await OrderService.FindOrdersByCustomerNameAsync(filteredName);
+        }
+    }
+
+    private async Task CreateOrder()
+    {
+        newOrder.Description = newDescription;
+
+        if (Guid.TryParse(selectedCustomer, out var customerId))
+        {
+            newOrder.CustomersId = customerId;
+        }
+
+        // newOrder.CustomersId = Guid.TryParse(selectedCustomer);
+        newOrder.Unit = selectedUnits;
+        newOrder.CreatedAt = DateTime.UtcNow;
+        newOrder.UpdatedAt = DateTime.UtcNow;
+
+        await OrderService.CreateOrderAsync(newOrder);
+        isFormVisible = false;
+        await LoadOrders();
+    }
+
+    private void ConvertUnitsToList()
+    {
+        if (selectedUnits == null) selectedUnits = new List<Unit>();
+
+        selectedUnits.Add(new Unit
+        {
+            Id = unitID,
+            Name = unitName,
+            Quantity = unitQuantity,
+            DepositId = unitDefaultDepositId
+        });
+
+        unitID = Guid.Empty;
+        unitName = string.Empty;
+        unitQuantity = 0;
+        isSecondFormVisible = false;
+    }
+}

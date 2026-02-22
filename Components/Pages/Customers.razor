@@ -1,0 +1,166 @@
+﻿@page "/customers"
+@using InventoryCRM.Data
+@using InventoryCRM.Models
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject InventoryCRM.Services.CustomerService CustomerService
+@inject IAuthorizationService AuthorizationService
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+
+<PageTitle>Customers</PageTitle>
+<h3>Customers</h3>
+<div class="mb-3">
+    <div class="input-group">
+        <input type="text" class="form-control" @bind="filteredName"
+               placeholder="Enter the name of customer" />
+        <button class="btn btn-secondary" @onclick="(FindByUsername)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" margin="8" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16" >
+                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+            </svg>
+             Find Customer 
+        </button>
+        <AuthorizeView Policy="Advanced">
+            <Authorized>
+                <button class="btn btn-primary" @onclick="() => isFormVisible = true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2" />
+                    </svg>
+                    Create Customer
+                </button>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+</div>
+
+@if (isFormVisible)
+{
+    <div class="modal-backdrop" @onclick="() => isFormVisible = false"></div>
+
+    <div class="centered-modal">
+        <EditForm Model="newCustomer" OnValidSubmit="CreateCustomer">
+            <div class="mb-3">
+                <h3>Create New Customer</h3>
+                <button class="btn btn-primary" type="submit">Save</button>
+            </div>
+            <button class="btn-close btn-close-black position-absolute top-0 end-0 m-3" aria-label="Close" @onclick="() => isFormVisible = false"></button>
+            <div>
+                <div class="mb-2">Name:</div>
+                <InputText @bind-Value="newName" class="form-control" />
+            </div>
+            <div>
+                <div class="mb-2">IDNO:</div>
+                <InputText @bind-Value="newIDNO" class="form-control" />
+            </div>
+            <div>
+                <div class="mb-2">Address:</div>
+                <InputText @bind-Value="newAddress" class="form-control" />
+            </div>
+            <div>
+                <div class="mb-2">PhoneNumber:</div>
+                <InputText @bind-Value="newPhoneNumber" class="form-control" />
+            </div>
+            <div>
+                <div class="mb-2">Email:</div>
+                <InputText @bind-Value="newEmail" class="form-control" />
+            </div>
+            <div>
+                <div class="mb-2">Description:</div>
+                <InputText @bind-Value="newDescription" class="form-control" />
+            </div>
+        </EditForm>
+    </div>
+}
+
+@if(customers == null)
+{
+    <div class="text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p><em>Loading customers...</em></p>
+    </div>
+}
+else if (customers.Count == 0)
+{
+    <div class="text-center">
+        <p><em>There is no customers, You can create a new one</em></p>
+    </div>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var customer in customers)
+        {
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>@customer.Name</strong>
+                    <div><small class="text-muted">INDO: @customer.IDNO</small></div>
+                    <div><small class="text-muted">Address: @customer.Address</small></div>
+                    <div><small class="text-muted">Phone Number: @customer.PhoneNumber</small></div>
+                    <div><small class="text-muted">Email: @customer.Email</small></div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    private List<Customer>? customers;
+    private string filteredName = string.Empty;
+
+    private Customer newCustomer = new Customer();
+    private string newIDNO = string.Empty;
+    private string newName = string.Empty;
+    private string newAddress = string.Empty;
+    private string newPhoneNumber = string.Empty;
+    private string newEmail = string.Empty;
+    private string newDescription = string.Empty;
+
+    private bool isFormVisible = false;
+    private bool advanced = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomers();
+        var authState = await authenticationStateTask;
+        advanced = (await AuthorizationService.AuthorizeAsync(authState.User, "Advanced")).Succeeded;
+
+    }
+
+    protected async Task LoadCustomers()
+    {
+        customers = await CustomerService.GetAllCustomersAsync();
+    }
+    
+
+    protected async Task FindByUsername()
+    {
+        if (!string.IsNullOrEmpty(filteredName))
+        {
+            customers = await CustomerService.FindCustomerByNameAsync(filteredName);
+        }
+    }
+
+    protected async Task CreateCustomer()
+    {
+        newCustomer.IDNO = newIDNO;
+        newCustomer.Name = newName;
+        newCustomer.Address = newAddress;
+        newCustomer.PhoneNumber = newPhoneNumber;
+        newCustomer.Email = newEmail;
+        newCustomer.Description = newDescription;
+
+        if (!string.IsNullOrEmpty(newCustomer.Name) && !string.IsNullOrEmpty(newCustomer.IDNO))
+        {
+            await CustomerService.CreateCustomerAsync(newCustomer);
+            await LoadCustomers();
+            isFormVisible = false;
+        }
+    }
+
+}

@@ -8,11 +8,11 @@
 
 
         // Many to One to Units
-        public ICollection<Unit> Unit { get; set; }
+        public ICollection<Unit>? Unit { get; set; }
 
         // Foreign key to User
         public Guid? UserId { get; set; }
-        public User User { get; set; }
+        public User? User { get; set; }
 
     }
 }

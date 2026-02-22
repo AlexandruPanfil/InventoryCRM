@@ -25,6 +25,9 @@ builder.Services.AddScoped<TodoService>();
 builder.Services.AddScoped<UnitService>();
 builder.Services.AddScoped<DepositService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<CustomerService>();
+builder.Services.AddScoped<OrderService>();
+
 
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
@@ -71,16 +74,39 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
-// Seed Roles
+// Seed Roles and Admin User
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    
     string[] roleNames = { "Admin", "Manager", "Deposit", "User" };
     foreach (var roleName in roleNames)
     {
         if (!await roleManager.RoleExistsAsync(roleName))
         {
             await roleManager.CreateAsync(new IdentityRole(roleName));
+        }
+    }
+
+    // Seed Admin User
+    string adminEmail = "admin@example.com";
+    string adminPassword = "Admin@123456";
+    
+    var adminUser = await userManager.FindByEmailAsync(adminEmail);
+    if (adminUser == null)
+    {
+        var newAdminUser = new ApplicationUser
+        {
+            UserName = adminEmail,
+            Email = adminEmail,
+            EmailConfirmed = true
+        };
+        
+        var result = await userManager.CreateAsync(newAdminUser, adminPassword);
+        if (result.Succeeded)
+        {
+            await userManager.AddToRoleAsync(newAdminUser, "Admin");
         }
     }
 }

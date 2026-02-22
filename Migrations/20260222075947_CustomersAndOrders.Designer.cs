@@ -3,6 +3,7 @@ using System;
 using InventoryCRM.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace InventoryCRM.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260222075947_CustomersAndOrders")]
+    partial class CustomersAndOrders
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -86,7 +89,7 @@ namespace InventoryCRM.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("InventoryCRM.Models.Customer", b =>
+            modelBuilder.Entity("InventoryCRM.Models.Customers", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -152,7 +155,7 @@ namespace InventoryCRM.Migrations
                         });
                 });
 
-            modelBuilder.Entity("InventoryCRM.Models.Order", b =>
+            modelBuilder.Entity("InventoryCRM.Models.Orders", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -229,7 +232,7 @@ namespace InventoryCRM.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
-                    b.Property<Guid?>("OrderId")
+                    b.Property<Guid?>("OrdersId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Quantity")
@@ -239,7 +242,7 @@ namespace InventoryCRM.Migrations
 
                     b.HasIndex("DepositId");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("OrdersId");
 
                     b.ToTable("Units", (string)null);
                 });
@@ -401,9 +404,9 @@ namespace InventoryCRM.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("InventoryCRM.Models.Order", b =>
+            modelBuilder.Entity("InventoryCRM.Models.Orders", b =>
                 {
-                    b.HasOne("InventoryCRM.Models.Customer", "Customers")
+                    b.HasOne("InventoryCRM.Models.Customers", "Customers")
                         .WithMany("Orders")
                         .HasForeignKey("CustomersId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -427,9 +430,9 @@ namespace InventoryCRM.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("InventoryCRM.Models.Order", null)
+                    b.HasOne("InventoryCRM.Models.Orders", null)
                         .WithMany("Unit")
-                        .HasForeignKey("OrderId");
+                        .HasForeignKey("OrdersId");
 
                     b.Navigation("Deposit");
                 });
@@ -485,7 +488,7 @@ namespace InventoryCRM.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("InventoryCRM.Models.Customer", b =>
+            modelBuilder.Entity("InventoryCRM.Models.Customers", b =>
                 {
                     b.Navigation("Orders");
                 });
@@ -495,7 +498,7 @@ namespace InventoryCRM.Migrations
                     b.Navigation("Unit");
                 });
 
-            modelBuilder.Entity("InventoryCRM.Models.Order", b =>
+            modelBuilder.Entity("InventoryCRM.Models.Orders", b =>
                 {
                     b.Navigation("Unit");
                 });
