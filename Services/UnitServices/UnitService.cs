@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using InventoryCRM.Models;
 using InventoryCRM.Data;
+using InventoryCRM.Models.UnitModels;
 
 
-namespace InventoryCRM.Services
+namespace InventoryCRM.Services.UnitServices
 {
     public class UnitService
     {

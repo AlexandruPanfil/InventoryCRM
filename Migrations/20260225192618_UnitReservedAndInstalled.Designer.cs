@@ -3,6 +3,7 @@ using System;
 using InventoryCRM.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace InventoryCRM.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260225192618_UnitReservedAndInstalled")]
+    partial class UnitReservedAndInstalled
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -134,12 +137,12 @@ namespace InventoryCRM.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
-                    b.Property<Guid?>("WorkerId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("WorkerId")
+                    b.HasIndex("UserId")
                         .IsUnique();
 
                     b.ToTable("Deposits", (string)null);
@@ -179,14 +182,14 @@ namespace InventoryCRM.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("WorkerId")
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CustomersId");
 
-                    b.HasIndex("WorkerId");
+                    b.HasIndex("UserId");
 
                     b.ToTable("Orders", (string)null);
                 });
@@ -302,20 +305,20 @@ namespace InventoryCRM.Migrations
                     b.ToTable("UnitsReserved", (string)null);
                 });
 
-            modelBuilder.Entity("InventoryCRM.Models.Worker", b =>
+            modelBuilder.Entity("InventoryCRM.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Workername")
+                    b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Workers", (string)null);
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -452,11 +455,11 @@ namespace InventoryCRM.Migrations
 
             modelBuilder.Entity("InventoryCRM.Models.Deposit", b =>
                 {
-                    b.HasOne("InventoryCRM.Models.Worker", "Worker")
+                    b.HasOne("InventoryCRM.Models.User", "User")
                         .WithOne("Deposit")
-                        .HasForeignKey("InventoryCRM.Models.Deposit", "WorkerId");
+                        .HasForeignKey("InventoryCRM.Models.Deposit", "UserId");
 
-                    b.Navigation("Worker");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("InventoryCRM.Models.Order", b =>
@@ -467,14 +470,14 @@ namespace InventoryCRM.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("InventoryCRM.Models.Worker", "Worker")
+                    b.HasOne("InventoryCRM.Models.User", "User")
                         .WithMany()
-                        .HasForeignKey("WorkerId")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Customers");
 
-                    b.Navigation("Worker");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("InventoryCRM.Models.UnitModels.Unit", b =>
@@ -592,7 +595,7 @@ namespace InventoryCRM.Migrations
                     b.Navigation("UnitReserved");
                 });
 
-            modelBuilder.Entity("InventoryCRM.Models.Worker", b =>
+            modelBuilder.Entity("InventoryCRM.Models.User", b =>
                 {
                     b.Navigation("Deposit");
                 });

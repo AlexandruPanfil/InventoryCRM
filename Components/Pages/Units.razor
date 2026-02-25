@@ -1,9 +1,12 @@
 ﻿@page "/units"
 @using InventoryCRM.Data
 @using InventoryCRM.Models
+@using InventoryCRM.Models.UnitModels
+@using InventoryCRM.Services
+@using InventoryCRM.Services.UnitServices
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
-@inject InventoryCRM.Services.UnitService UnitService
+@inject UnitService UnitService
 @inject InventoryCRM.Services.DepositService DepositService
 @inject IAuthorizationService AuthorizationService
 @rendermode InteractiveServer

@@ -1,4 +1,6 @@
-﻿namespace InventoryCRM.Models
+﻿using InventoryCRM.Models.UnitModels;
+
+namespace InventoryCRM.Models
 {
     public class Deposit
     {
@@ -11,8 +13,8 @@
         public ICollection<Unit>? Unit { get; set; }
 
         // Foreign key to User
-        public Guid? UserId { get; set; }
-        public User? User { get; set; }
+        public Guid? WorkerId { get; set; }
+        public Worker? Worker { get; set; }
 
     }
 }

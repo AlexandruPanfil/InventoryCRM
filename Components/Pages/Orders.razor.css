@@ -21,3 +21,27 @@
     z-index: 1001;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
+
+.modal-second-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    /*    background: rgba(0,0,0,0.5);*/
+    z-index: 1002;
+}
+
+.centered-second-modal {
+    position: fixed;
+    top: 20%;
+    left: 20%;
+    /* transform: translate(-50%, -50%);  */
+    width: 60vw;
+    height: 70vh;
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    z-index: 1003;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}

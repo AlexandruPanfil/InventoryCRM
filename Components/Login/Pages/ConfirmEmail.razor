@@ -8,7 +8,8 @@
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IdentityRedirectManager RedirectManager
-@inject UserService UserService
+@inject WorkerService WorkerService
+
 
 <PageTitle>Confirm email</PageTitle>
 
@@ -53,10 +54,10 @@
                 // Create the custom User record if it doesn't exist
                 if (Guid.TryParse(user.Id, out var userGuid))
                 {
-                    var existingUser = await UserService.GetUsersAsync(userGuid);
-                    if (existingUser == null)
+                    var existingWorker = await WorkerService.GetUsersAsync(userGuid);
+                    if (existingWorker == null)
                     {
-                        await UserService.CreateUsersAsync(user.Email ?? user.UserName ?? "Unknown", userGuid);
+                        await WorkerService.CreateUsersAsync(user.Email ?? user.UserName ?? "Unknown", userGuid);
                     }
                 }
                 

@@ -18,7 +18,7 @@ namespace InventoryCRM.Services
             return await _context.Orders
                 .Include(o => o.Customers)
                 .Include(o => o.Unit)
-                .Include(o => o.User)
+                .Include(o => o.Worker)
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
         }
@@ -28,7 +28,7 @@ namespace InventoryCRM.Services
             return await _context.Orders
                 .Include(o => o.Customers)
                 .Include(o => o.Unit)
-                .Include(o => o.User)
+                .Include(o => o.Worker)
                 .FirstOrDefaultAsync(o => o.Id == id);
         }
 
@@ -63,7 +63,7 @@ namespace InventoryCRM.Services
             return order;
         }
 
-        public async Task<Order> UpdateOrderAsync(Guid id, string? description = null, string? status = null, Guid? userId = null)
+        public async Task<Order> UpdateOrderAsync(Guid id, string? description = null, string? status = null, Guid? workerId = null)
         {
             var order = await _context.Orders.FindAsync(id);
             if (order != null)
@@ -74,7 +74,7 @@ namespace InventoryCRM.Services
                 if (!string.IsNullOrWhiteSpace(status))
                     order.SetStatus(status);
 
-                order.UserId = userId;
+                order.WorkerId = workerId;
                 order.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();

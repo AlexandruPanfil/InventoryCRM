@@ -1,4 +1,5 @@
 ﻿using InventoryCRM.Models;
+using InventoryCRM.Models.UnitModels;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,8 +15,11 @@ namespace InventoryCRM.Data
         }
         public DbSet<TodoItem> Todos { get; set; }
         public DbSet<Unit> Units { get; set; }
+        public DbSet<UnitInstalled> UnitsInstalled { get; set; }
+        public DbSet<UnitReserved> UnitsReserved { get; set; }
+
         public DbSet<Deposit> Deposits { get; set; }
-        public DbSet<User> AppUsers { get; set; }
+        public DbSet<Worker> Workers { get; set; }
         public DbSet<Customer> Customers { get; set; }
         public DbSet<Order> Orders { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -47,6 +51,32 @@ namespace InventoryCRM.Data
                 entity.Ignore(e => e.IsExpanded);
             });
 
+            modelBuilder.Entity<UnitInstalled>(entity =>
+            {
+                entity.ToTable("UnitsInstalled");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.Name)
+                    .HasMaxLength(100)
+                    .HasColumnType("varchar(100)")
+                    .IsRequired();
+                entity.Property(e => e.CustomerId).IsRequired();
+                entity.Ignore(e => e.IsExpanded);
+            });
+
+            modelBuilder.Entity<UnitReserved>(entity =>
+            {
+                entity.ToTable("UnitsReserved");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.Name)
+                    .HasMaxLength(100)
+                    .HasColumnType("varchar(100)")
+                    .IsRequired();
+                entity.Property(e => e.CustomerId).IsRequired();
+                entity.Ignore(e => e.IsExpanded);
+            });
+
             var defaultDepositId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
             modelBuilder.Entity<Deposit>().HasData(new Deposit
@@ -54,7 +84,7 @@ namespace InventoryCRM.Data
                 Id = defaultDepositId,
                 Name = "Main Deposit",
                 IsExpanded = false,
-                User = null
+                Worker = null
             });
 
             modelBuilder.Entity<Deposit>(entity =>
@@ -69,12 +99,12 @@ namespace InventoryCRM.Data
                 entity.Ignore(e => e.IsExpanded);
             });
 
-            modelBuilder.Entity<User>(entity =>
+            modelBuilder.Entity<Worker>(entity =>
             {
-                entity.ToTable("Users");
+                entity.ToTable("Workers");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).ValueGeneratedOnAdd();
-                entity.Property(e => e.Username)
+                entity.Property(e => e.Workername)
                     .HasMaxLength(100)
                     .HasColumnType("varchar(100)")
                     .IsRequired();
@@ -142,10 +172,10 @@ namespace InventoryCRM.Data
                       .HasForeignKey(o => o.CustomersId)
                       .OnDelete(DeleteBehavior.Cascade);
 
-                entity.Property(e => e.UserId).IsRequired(false);
-                entity.HasOne(o => o.User)
+                entity.Property(e => e.WorkerId).IsRequired(false);
+                entity.HasOne(o => o.Worker)
                       .WithMany()
-                      .HasForeignKey(o => o.UserId)
+                      .HasForeignKey(o => o.WorkerId)
                       .OnDelete(DeleteBehavior.SetNull);
             });
         }

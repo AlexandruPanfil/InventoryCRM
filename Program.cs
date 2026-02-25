@@ -2,6 +2,7 @@ using InventoryCRM.Components;
 using InventoryCRM.Components.Login;
 using InventoryCRM.Data;
 using InventoryCRM.Services;
+using InventoryCRM.Services.UnitServices;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -24,7 +25,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<TodoService>();
 builder.Services.AddScoped<UnitService>();
 builder.Services.AddScoped<DepositService>();
-builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<WorkerService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<OrderService>();
 

@@ -1,11 +1,11 @@
-﻿@page "/users"
+﻿@page "/workers"
 @using InventoryCRM.Data
 @using InventoryCRM.Models
-@inject InventoryCRM.Services.UserService UserService
+@inject InventoryCRM.Services.WorkerService WorkerService
 @rendermode InteractiveServer
 @attribute [Authorize]
 
-<PageTitle>Users</PageTitle>
+<PageTitle>Workers</PageTitle>
 
 <h1>Users</h1>
 
@@ -13,7 +13,7 @@
 
 <div class="mb-3">
     <div class="input-group">
-        <input type="text" class="form-control" @bind="newUserName"
+        <input type="text" class="form-control" @bind="newWorkerName"
                placeholder="Enter the name of user" @onkeyup="HandleKeyPress" />
         <button class="btn btn-secondary" @onclick="(FindByUsername)">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" margin="8" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16" >
@@ -31,7 +31,7 @@
 </div>
 
 
-@if (users == null)
+@if (workers == null)
 {
     <div class="text-center">
         <div class="spinner-border text-primary" role="status">
@@ -40,7 +40,7 @@
         <p><em>Loading users...</em></p>
     </div>
 }
-else if (users.Count == 0)
+else if (workers.Count == 0)
 {
     <div class="text-center">
         <p><em>There is no users, You can create a new one</em></p>
@@ -49,12 +49,12 @@ else if (users.Count == 0)
 else
 {
     <div class="list-group">
-        @foreach (var user in users)
+        @foreach (var worker in workers)
         {
             <div class="list-group-item d-flex justify-content-between align-items-center">
                 <div>
-                    <strong>@user.Username</strong>
-                    <div><small class="text-muted">Deposit: @user.Deposit.Name</small></div>
+                    <strong>@worker.Workername</strong>
+                    <div><small class="text-muted">Deposit: @worker.Deposit.Name</small></div>
                 </div>
             </div>
         }
@@ -64,8 +64,8 @@ else
 
 
 @code {
-    private List<User>? users;
-    private string newUserName = string.Empty;
+    private List<Worker>? workers;
+    private string newWorkerName = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -75,7 +75,7 @@ else
     {
         try
         {
-            users = await UserService.GetAllUsersAsync();
+            workers = await WorkerService.GetAllUsersAsync();
         }
         catch (Exception ex)
         {
@@ -84,12 +84,12 @@ else
     }
     private async Task AddUser()
     {
-        if (!string.IsNullOrWhiteSpace(newUserName))
+        if (!string.IsNullOrWhiteSpace(newWorkerName))
         {
             try
             {
-                await UserService.CreateUsersAsync(newUserName);
-                newUserName = string.Empty;
+                await WorkerService.CreateUsersAsync(newWorkerName);
+                newWorkerName = string.Empty;
                 await LoadUsers();
             }
             catch (Exception ex)
@@ -100,11 +100,11 @@ else
     }
     private async Task FindByUsername()
     {
-        if (!string.IsNullOrWhiteSpace(newUserName))
+        if (!string.IsNullOrWhiteSpace(newWorkerName))
         {
             try
             {
-                users = await UserService.FindUsersByNameAsync(newUserName);
+                workers = await WorkerService.FindUsersByNameAsync(newWorkerName);
             }
             catch (Exception ex)
             {

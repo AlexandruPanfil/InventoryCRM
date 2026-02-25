@@ -1,4 +1,5 @@
-﻿using System;
+﻿using InventoryCRM.Models.UnitModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,14 +17,16 @@ namespace InventoryCRM.Models
 
         // Many to One to Units
         public ICollection<Unit>? Unit { get; set; } = new List<Unit>();
+        public ICollection<UnitInstalled>? UnitInstalled { get; set; } = new List<UnitInstalled>();
+        public ICollection<UnitReserved>? UnitReserved { get; set; } = new List<UnitReserved>();
 
         // Foreign key to Customers
         public Guid CustomersId { get; set; }
         public Customer Customers { get; set; } = null!;
 
-        // Foreign key to User
-        public Guid? UserId { get; set; }
-        public User? User { get; set; }
+        // Foreign key to Worker
+        public Guid? WorkerId { get; set; }
+        public Worker? Worker { get; set; }
 
         // Optional helper to set/validate status
         public void SetStatus(string status)

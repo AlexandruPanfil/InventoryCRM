@@ -1,10 +1,14 @@
 ﻿@page "/orders"
 @using InventoryCRM.Data
 @using InventoryCRM.Models
+@using InventoryCRM.Models.UnitModels
+@using InventoryCRM.Services
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @inject InventoryCRM.Services.OrderService OrderService
 @inject InventoryCRM.Services.CustomerService CustomerService
+@inject InventoryCRM.Services.WorkerService WorkerService
+@inject InventoryCRM.Services.UnitServices.UnitService UnitService
 @inject IAuthorizationService AuthorizationService
 @rendermode InteractiveServer
 @attribute [Authorize]
@@ -20,7 +24,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" margin="8" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
                 <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
             </svg>
-            Find Customer
+            Find Order
         </button>
         <AuthorizeView Policy="Advanced">
             <Authorized>
@@ -28,7 +32,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
                         <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2" />
                     </svg>
-                    Create Customer
+                    Create Order
                 </button>
             </Authorized>
         </AuthorizeView>
@@ -58,7 +62,17 @@
                 </InputSelect>
             </div>
             <div>
-                <div class="mb-2">Name:</div>
+                <div class="mb-2">Worker</div>
+                <InputSelect @bind-Value="selectedWorker" class="form-control">
+                    <option value="">Select Worker</option>
+                    @foreach (var worker in workers)
+                    {
+                        <option value="@worker.Id">@worker.Workername - @worker.Id</option>
+                    }
+                </InputSelect>
+            </div>
+            <div>
+                <div class="mb-2">Description:</div>
                 <InputText @bind-Value="newDescription" class="form-control" />
             </div>
             <div class="list-group">
@@ -72,7 +86,7 @@
                 }
                 else
                 {
-                    foreach (var unit in units)
+                    foreach (var unit in selectedUnits)
                     {
                         <div class="list-group-item  justify-content-between align-items-center">
                             <div class="unit-list-item row g-3">
@@ -103,7 +117,7 @@
             <div>
                 <div class="mb-2">Unit:</div>
                 <InputSelect @bind-Value="unitID" class="form-control">
-                    <option value="">Select Customer</option>
+                    <option value="">Select Unit</option>
                     @foreach (var unit in units)
                     {
                         <option value="@unit.Id">@unit.Name - @unit.Quantity</option>
@@ -140,7 +154,29 @@ else
         {
             <div class="list-group-item d-flex justify-content-between align-items-center">
                 <div>
-                    <strong>@order.Status - @order.Customers.Name - @order.CreatedAt</strong>
+                    <strong>@order.Status</strong> @order.Status - @order.Customers.Name - @order.CreatedAt
+                    <p><strong>Worker:</strong> @if(@order.Worker != null)
+                        {
+                            @order.Worker.Workername
+                        }else
+                        {
+                            <span>No Worker Assigned</span>
+                        }
+                    </p>
+                    <p>@order.Description</p>
+                    <p><strong>Units:</strong>
+                        @if (order.Unit != null && order.Unit.Count > 0)
+                        {
+                            foreach (var unit in order.Unit)
+                            {
+                                <span>@unit.Name (@unit.Quantity) </span>
+                            }
+                        }
+                        else
+                        {
+                            <span>No Units</span>
+                        }
+                        </p>
                 </div>
             </div>
         }
@@ -158,6 +194,9 @@ else
     private List<Customer> customers = new List<Customer>();
     private string selectedCustomer = string.Empty;
     // private Customer selectedCustomer = new Customer();
+
+    private List<Worker> workers = new List<Worker>();
+    private string selectedWorker  = string.Empty;
 
     private List<Unit> units = new List<Unit>();
     private List<Unit> selectedUnits = new List<Unit>();
@@ -184,6 +223,8 @@ else
     private async Task LoadOrders()
     {
         orders = await OrderService.GetAllOrdersAsync();
+        units = await UnitService.GetAllUnitsAsync();
+        workers = await WorkerService.GetAllUsersAsync();
         customers = await CustomerService.GetAllCustomersAsync();
     }
 

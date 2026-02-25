@@ -1,5 +1,6 @@
 ﻿using InventoryCRM.Data;
 using InventoryCRM.Models;
+using InventoryCRM.Models.UnitModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace InventoryCRM.Services

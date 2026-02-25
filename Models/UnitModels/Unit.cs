@@ -1,4 +1,4 @@
-﻿namespace InventoryCRM.Models
+﻿namespace InventoryCRM.Models.UnitModels
 {
     public class Unit
     {
