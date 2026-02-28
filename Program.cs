@@ -24,6 +24,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddScoped<TodoService>();
 builder.Services.AddScoped<UnitService>();
+builder.Services.AddScoped<UnitReservedService>();
+builder.Services.AddScoped<UnitInstalledService>();
 builder.Services.AddScoped<DepositService>();
 builder.Services.AddScoped<WorkerService>();
 builder.Services.AddScoped<CustomerService>();

@@ -9,6 +9,7 @@
 @inject InventoryCRM.Services.CustomerService CustomerService
 @inject InventoryCRM.Services.WorkerService WorkerService
 @inject InventoryCRM.Services.UnitServices.UnitService UnitService
+@inject InventoryCRM.Services.UnitServices.UnitReservedService UnitReservedService
 @inject IAuthorizationService AuthorizationService
 @rendermode InteractiveServer
 @attribute [Authorize]
@@ -46,7 +47,7 @@
     <div class="centered-modal">
         <EditForm Model="newOrder" OnValidSubmit="CreateOrder">
             <div class="mb-3">
-                <h3>Create New Customer</h3>
+                <h3>Create New Order</h3>
                 <button class="btn btn-primary" type="submit">Save</button>
                 <button class="btn btn-secondary" type="button" @onclick="() => isSecondFormVisible = true"> Add Unit</button>
             </div>
@@ -76,11 +77,11 @@
                 <InputText @bind-Value="newDescription" class="form-control" />
             </div>
             <div class="list-group">
-                @if (units == null)
+                @if (selectedUnits == null)
                 {
                     <span> No Units Added</span>
                 }
-                else if (units.Count == 0)
+                else if (selectedUnits.Count == 0)
                 {
                     <span> No Units Added</span>
                 }
@@ -92,7 +93,7 @@
                             <div class="unit-list-item row g-3">
                                 <span class="me-3 col-4"><strong>Unit Name:</strong> @unit.Name</span>
                                 <span class="me-3 col-4"><strong>Unit Quantity:</strong> @unit.Quantity</span>
-                                <button class="btn btn-danger col-1" type="button" @onclick="() => units.Remove(unit)">Remove</button>
+                                <button class="btn btn-danger col-1" type="button" @onclick="() => selectedUnits.Remove(unit)">Remove</button>
                             </div>
                         </div>
                     }
@@ -154,29 +155,49 @@ else
         {
             <div class="list-group-item d-flex justify-content-between align-items-center">
                 <div>
-                    <strong>@order.Status</strong> @order.Status - @order.Customers.Name - @order.CreatedAt
-                    <p><strong>Worker:</strong> @if(@order.Worker != null)
-                        {
-                            @order.Worker.Workername
-                        }else
-                        {
-                            <span>No Worker Assigned</span>
-                        }
-                    </p>
-                    <p>@order.Description</p>
-                    <p><strong>Units:</strong>
-                        @if (order.Unit != null && order.Unit.Count > 0)
-                        {
-                            foreach (var unit in order.Unit)
+                    @*TODO: For each oreder to create button where on selection open the form with details of order*@
+                    @* <button> *@
+                        <strong>@order.Status Order: </strong> @order.Customers.Name - @order.CreatedAt
+                        <p><strong>Worker:</strong> @if(@order.Worker != null)
                             {
-                                <span>@unit.Name (@unit.Quantity) </span>
+                                @order.Worker.Workername
+                            }else
+                            {
+                                <span>No Worker Assigned</span>
+                            }
+                        </p>
+                        <p>@order.Description</p>
+                        @*TODO: This section to show when the order is selected*@
+                        <p><strong>Units:</strong>
+                        @if (order.Status == "Finished")
+                        {
+                            @if (order.UnitInstalled != null && order.UnitInstalled.Count > 0)
+                            {
+                                foreach (var unit in order.UnitInstalled)
+                                {
+                                    <span>@unit.Name (@unit.Quantity) </span>
+                                }
+                            }
+                            else
+                            {
+                                <span>No Units</span>
+                            }
+                        }else{
+
+                            @if (order.UnitReserved != null && order.UnitReserved.Count > 0)
+                            {
+                                foreach (var unit in order.UnitReserved)
+                                {
+                                    <span>@unit.Name (@unit.Quantity) </span>
+                                }
+                            }
+                            else
+                            {
+                                <span>No Units</span>
                             }
                         }
-                        else
-                        {
-                            <span>No Units</span>
-                        }
-                        </p>
+                            </p>
+                    @* </button> *@
                 </div>
             </div>
         }
@@ -199,8 +220,8 @@ else
     private string selectedWorker  = string.Empty;
 
     private List<Unit> units = new List<Unit>();
-    private List<Unit> selectedUnits = new List<Unit>();
-    private Unit newUnit = new Unit();
+    private List<UnitReserved> selectedUnits = new List<UnitReserved>();
+    private UnitReserved newUnit = new UnitReserved();
     private Guid unitID = Guid.Empty;
     private string unitName = string.Empty;
     private int unitQuantity = 0;
@@ -249,8 +270,7 @@ else
             newOrder.CustomersId = customerId;
         }
 
-        // newOrder.CustomersId = Guid.TryParse(selectedCustomer);
-        newOrder.Unit = selectedUnits;
+        newOrder.UnitReserved = selectedUnits;
         newOrder.CreatedAt = DateTime.UtcNow;
         newOrder.UpdatedAt = DateTime.UtcNow;
 
@@ -261,14 +281,18 @@ else
 
     private void ConvertUnitsToList()
     {
-        if (selectedUnits == null) selectedUnits = new List<Unit>();
+        if (selectedUnits == null) selectedUnits = new List<UnitReserved>();
+        
+        Guid.TryParse(selectedCustomer, out var customerId);
 
-        selectedUnits.Add(new Unit
+        var unitToTransfer = units.FirstOrDefault(u => u.Id == unitID);
+
+        selectedUnits.Add(new UnitReserved
         {
-            Id = unitID,
-            Name = unitName,
+            Id = new Guid(),
+            Name = unitToTransfer.Name,
             Quantity = unitQuantity,
-            DepositId = unitDefaultDepositId
+            CustomerId = customerId
         });
 
         unitID = Guid.Empty;
