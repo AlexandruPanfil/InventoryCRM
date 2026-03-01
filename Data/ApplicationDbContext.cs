@@ -15,9 +15,7 @@ namespace InventoryCRM.Data
         }
         public DbSet<TodoItem> Todos { get; set; }
         public DbSet<Unit> Units { get; set; }
-        public DbSet<UnitInstalled> UnitsInstalled { get; set; }
-        public DbSet<UnitReserved> UnitsReserved { get; set; }
-
+        public DbSet<UnitAssignment> UnitsAssignment { get; set; }
         public DbSet<Deposit> Deposits { get; set; }
         public DbSet<Worker> Workers { get; set; }
         public DbSet<Customer> Customers { get; set; }
@@ -51,22 +49,9 @@ namespace InventoryCRM.Data
                 entity.Ignore(e => e.IsExpanded);
             });
 
-            modelBuilder.Entity<UnitInstalled>(entity =>
+            modelBuilder.Entity<UnitAssignment>(entity =>
             {
-                entity.ToTable("UnitsInstalled");
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Id).ValueGeneratedOnAdd();
-                entity.Property(e => e.Name)
-                    .HasMaxLength(100)
-                    .HasColumnType("varchar(100)")
-                    .IsRequired();
-                entity.Property(e => e.CustomerId).IsRequired();
-                entity.Ignore(e => e.IsExpanded);
-            });
-
-            modelBuilder.Entity<UnitReserved>(entity =>
-            {
-                entity.ToTable("UnitsReserved");
+                entity.ToTable("UnitsAssignment");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).ValueGeneratedOnAdd();
                 entity.Property(e => e.Name)

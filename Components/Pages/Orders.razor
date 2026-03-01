@@ -9,7 +9,7 @@
 @inject InventoryCRM.Services.CustomerService CustomerService
 @inject InventoryCRM.Services.WorkerService WorkerService
 @inject InventoryCRM.Services.UnitServices.UnitService UnitService
-@inject InventoryCRM.Services.UnitServices.UnitReservedService UnitReservedService
+@inject InventoryCRM.Services.UnitServices.UnitAssignmentService UnitReservedService
 @inject IAuthorizationService AuthorizationService
 @rendermode InteractiveServer
 @attribute [Authorize]
@@ -133,6 +133,44 @@
     </div>
 }
 
+
+@if (isDetailsFormVisible)
+{
+    <div class="modal-backdrop" @onclick="() => isDetailsFormVisible = false"></div>
+    <div class="centered-modal">
+        <div class="mb-3">
+            <h3>Order Details</h3>
+        </div>
+        <button class="btn-close btn-close-black position-absolute top-0 end-0 m-3" aria-label="Close" @onclick="() => isDetailsFormVisible = false"></button>
+        <div>
+            <p><strong>Customer:</strong> @openOrder.Customers.Name</p>
+            <p>
+                <strong>Worker:</strong> @if(@openOrder.Worker != null)
+                {
+                    @openOrder.Worker.Workername
+                }else
+                {
+                    <span>No Worker Assigned</span>
+                }
+            </p>
+            <p><strong>Description:</strong> @openOrder.Description</p>
+            <p><strong>Units:</strong>
+                @if (openOrder.UnitAssignment != null && openOrder.UnitAssignment.Count > 0)
+                {
+                    foreach (var unit in openOrder.UnitAssignment)
+                    {
+                        <span>@unit.Name (@unit.Quantity) </span>
+                    }
+                }
+                else
+                {
+                    <span>No Units</span>
+                }
+            </p>
+        </div>
+    </div>
+}
+
 @if (orders == null)
 {
     <div class="text-center">
@@ -155,9 +193,9 @@ else
         {
             <div class="list-group-item d-flex justify-content-between align-items-center">
                 <div>
-                    @*TODO: For each oreder to create button where on selection open the form with details of order*@
-                    @* <button> *@
-                        <strong>@order.Status Order: </strong> @order.Customers.Name - @order.CreatedAt
+                    <div @onclick="() => OpenOrder(order)" style="cursor:pointer">
+                        <strong>@order.Status Order: </strong> @order.Customers.Name
+                        <p>Created at: @order.CreatedAt</p>
                         <p><strong>Worker:</strong> @if(@order.Worker != null)
                             {
                                 @order.Worker.Workername
@@ -167,42 +205,14 @@ else
                             }
                         </p>
                         <p>@order.Description</p>
-                        @*TODO: This section to show when the order is selected*@
-                        <p><strong>Units:</strong>
-                        @if (order.Status == "Finished")
-                        {
-                            @if (order.UnitInstalled != null && order.UnitInstalled.Count > 0)
-                            {
-                                foreach (var unit in order.UnitInstalled)
-                                {
-                                    <span>@unit.Name (@unit.Quantity) </span>
-                                }
-                            }
-                            else
-                            {
-                                <span>No Units</span>
-                            }
-                        }else{
-
-                            @if (order.UnitReserved != null && order.UnitReserved.Count > 0)
-                            {
-                                foreach (var unit in order.UnitReserved)
-                                {
-                                    <span>@unit.Name (@unit.Quantity) </span>
-                                }
-                            }
-                            else
-                            {
-                                <span>No Units</span>
-                            }
-                        }
-                            </p>
-                    @* </button> *@
+                    </div> 
                 </div>
             </div>
         }
     </div>
 }
+
+
 
 
 @code {
@@ -212,6 +222,8 @@ else
     private Order newOrder = new Order();
     private string newDescription = string.Empty;
 
+    private Order openOrder = new Order();
+
     private List<Customer> customers = new List<Customer>();
     private string selectedCustomer = string.Empty;
     // private Customer selectedCustomer = new Customer();
@@ -220,8 +232,8 @@ else
     private string selectedWorker  = string.Empty;
 
     private List<Unit> units = new List<Unit>();
-    private List<UnitReserved> selectedUnits = new List<UnitReserved>();
-    private UnitReserved newUnit = new UnitReserved();
+    private List<UnitAssignment> selectedUnits = new List<UnitAssignment>();
+    private UnitAssignment newUnit = new UnitAssignment();
     private Guid unitID = Guid.Empty;
     private string unitName = string.Empty;
     private int unitQuantity = 0;
@@ -231,6 +243,7 @@ else
     private string filteredName = string.Empty;
     private bool isFormVisible = false;
     private bool isSecondFormVisible = false;
+    private bool isDetailsFormVisible = false;
 
     private bool advanced = false;
 
@@ -270,24 +283,26 @@ else
             newOrder.CustomersId = customerId;
         }
 
-        newOrder.UnitReserved = selectedUnits;
+        newOrder.UnitAssignment = selectedUnits;
         newOrder.CreatedAt = DateTime.UtcNow;
         newOrder.UpdatedAt = DateTime.UtcNow;
+        newOrder.WorkerId = Guid.TryParse(selectedWorker, out var workerId) ? workerId : (Guid?)null;
 
         await OrderService.CreateOrderAsync(newOrder);
         isFormVisible = false;
+        newOrder = new Order();
         await LoadOrders();
     }
 
     private void ConvertUnitsToList()
     {
-        if (selectedUnits == null) selectedUnits = new List<UnitReserved>();
-        
+        if (selectedUnits == null) selectedUnits = new List<UnitAssignment>();
+
         Guid.TryParse(selectedCustomer, out var customerId);
 
         var unitToTransfer = units.FirstOrDefault(u => u.Id == unitID);
 
-        selectedUnits.Add(new UnitReserved
+        selectedUnits.Add(new UnitAssignment
         {
             Id = new Guid(),
             Name = unitToTransfer.Name,
@@ -299,5 +314,11 @@ else
         unitName = string.Empty;
         unitQuantity = 0;
         isSecondFormVisible = false;
+    }
+
+    private void OpenOrder(Order order)
+    {
+        isDetailsFormVisible = true;
+        openOrder = order;
     }
 }

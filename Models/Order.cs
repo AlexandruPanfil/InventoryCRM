@@ -16,8 +16,7 @@ namespace InventoryCRM.Models
         public string Status { get; set; } = OrderStatus.New;
 
         // Many to One to Units
-        public ICollection<UnitInstalled>? UnitInstalled { get; set; } = new List<UnitInstalled>();
-        public ICollection<UnitReserved>? UnitReserved { get; set; } = new List<UnitReserved>();
+        public ICollection<UnitAssignment>? UnitAssignment { get; set; } = new List<UnitAssignment>();
 
         // Foreign key to Customers
         public Guid CustomersId { get; set; }

@@ -17,8 +17,7 @@ namespace InventoryCRM.Services
         {
             return await _context.Orders
                 .Include(o => o.Customers)
-                .Include(o => o.UnitInstalled)
-                .Include(o => o.UnitReserved)
+                .Include(o => o.UnitAssignment)
                 .Include(o => o.Worker)
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
@@ -28,8 +27,7 @@ namespace InventoryCRM.Services
         {
             return await _context.Orders
                 .Include(o => o.Customers)
-                .Include(o => o.UnitInstalled)
-                .Include(o => o.UnitReserved)
+                .Include(o => o.UnitAssignment)
                 .Include(o => o.Worker)
                 .FirstOrDefaultAsync(o => o.Id == id);
         }
@@ -38,8 +36,7 @@ namespace InventoryCRM.Services
         {
             return await _context.Orders
                 .Where(o => o.CustomersId == customerId)
-                .Include(o => o.UnitInstalled)
-                .Include(o => o.UnitReserved)
+                .Include(o => o.UnitAssignment)
                 .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
         }

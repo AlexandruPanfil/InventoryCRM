@@ -5,63 +5,63 @@ using InventoryCRM.Models;
 
 namespace InventoryCRM.Services.UnitServices
 {
-    public class UnitReservedService
+    public class UnitAssignmentService
     {
         private readonly ApplicationDbContext _context;
 
-        public UnitReservedService(ApplicationDbContext context)
+        public UnitAssignmentService(ApplicationDbContext context)
         {
             _context = context;
         }
 
         // For getting all reserved units
-        public async Task<List<UnitReserved>> GetAllUnitsReservedAsync()
+        public async Task<List<UnitAssignment>> GetAllUnitsReservedAsync()
         {
-            return await _context.UnitsReserved.OrderBy(u => u.Name).ToListAsync();
+            return await _context.UnitsAssignment.OrderBy(u => u.Name).ToListAsync();
         }
 
         // For getting all reserved units by customer
-        public async Task<List<UnitReserved>> GetUnitsReservedByCustomerAsync(Guid customerId)
+        public async Task<List<UnitAssignment>> GetUnitsReservedByCustomerAsync(Guid customerId)
         {
-            return await _context.UnitsReserved
+            return await _context.UnitsAssignment
                 .Where(u => u.CustomerId == customerId)
                 .OrderBy(u => u.Name)
                 .ToListAsync();
         }
 
         // For getting a specific reserved unit
-        public async Task<UnitReserved?> GetUnitReservedAsync(Guid id)
+        public async Task<UnitAssignment?> GetUnitReservedAsync(Guid id)
         {
-            return await _context.UnitsReserved.FindAsync(id);
+            return await _context.UnitsAssignment.FindAsync(id);
         }
 
         // Find reserved units by name
-        public async Task<List<UnitReserved>> FindUnitsReservedAsync(string unitName)
+        public async Task<List<UnitAssignment>> FindUnitsReservedAsync(string unitName)
         {
-            return await _context.UnitsReserved
+            return await _context.UnitsAssignment
                 .Where(u => u.Name.Contains(unitName))
                 .OrderBy(u => u.Name)
                 .ToListAsync();
         }
 
         // For creating a new reserved unit
-        public async Task<UnitReserved> CreateUnitReservedAsync(string name, int quantity, Guid customerId)
+        public async Task<UnitAssignment> CreateUnitReservedAsync(string name, int quantity, Guid customerId)
         {
-            var unitReserved = new UnitReserved
+            var unitReserved = new UnitAssignment
             {
                 Name = name,
                 Quantity = quantity,
                 CustomerId = customerId
             };
-            _context.UnitsReserved.Add(unitReserved);
+            _context.UnitsAssignment.Add(unitReserved);
             await _context.SaveChangesAsync();
             return unitReserved;
         }
 
         // For updating an existing reserved unit
-        public async Task<UnitReserved?> UpdateUnitReservedAsync(Guid id, string name, int quantity)
+        public async Task<UnitAssignment?> UpdateUnitReservedAsync(Guid id, string name, int quantity)
         {
-            var unitReserved = await _context.UnitsReserved.FindAsync(id);
+            var unitReserved = await _context.UnitsAssignment.FindAsync(id);
             if (unitReserved != null)
             {
                 unitReserved.Name = name;
@@ -74,10 +74,10 @@ namespace InventoryCRM.Services.UnitServices
         // For deleting a reserved unit
         public async Task DeleteUnitReservedAsync(Guid id)
         {
-            var unitReserved = await _context.UnitsReserved.FindAsync(id);
+            var unitReserved = await _context.UnitsAssignment.FindAsync(id);
             if (unitReserved != null)
             {
-                _context.UnitsReserved.Remove(unitReserved);
+                _context.UnitsAssignment.Remove(unitReserved);
                 await _context.SaveChangesAsync();
             }
         }
@@ -93,7 +93,7 @@ namespace InventoryCRM.Services.UnitServices
         // Check if reserved unit belongs to customer
         public async Task<bool> IsUnitReservedForCustomerAsync(Guid unitId, Guid customerId)
         {
-            var unitReserved = await _context.UnitsReserved.FindAsync(unitId);
+            var unitReserved = await _context.UnitsAssignment.FindAsync(unitId);
             if (unitReserved != null && unitReserved.CustomerId == customerId)
             {
                 return true;
