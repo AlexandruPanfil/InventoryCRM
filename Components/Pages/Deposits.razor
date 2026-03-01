@@ -174,62 +174,47 @@ else if (deposits.Count == 0)
 }
 else
 {
-    <div class="list-group">
-        @foreach (var deposit in deposits)
-        {
-            <div class="list-group-item  justify-content-between align-items-center">
-                <div  @onclick="() => deposit.IsExpanded = !deposit.IsExpanded">
-                    @if (deposit.IsExpanded)
-                    {
-                        <div class="deposit-name-open">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-caret-down-fill" viewBox="0 0 16 16">
-                                <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z" />
-                            </svg>
-                        @deposit.Name
-                        </div>
-                    }
-                    else
-                    {
-                        <div class ="deposit-name">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-caret-right-fill" viewBox="0 0 16 16">
-                                <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
-                            </svg>
-                            @deposit.Name
-                        </div>
-                    }
-                </div>
-                    @if (deposit.IsExpanded)
-                    {
-                    <div class="list-group col-*-*">
-                        <table class="table table-sm mb-2 table-fixed">
-                            <colgroup>
-                                <col class="col-name" />
-                                <col class="col-quantity" />
-                                <col class="col-actions" />
-                            </colgroup>
-                            <thead>
+    <div class="list-group shadow-sm">
+    @foreach (var deposit in deposits)
+    {
+        <div class="list-group-item p-0 border-bottom">
+            @* Header Section *@
+            <div class="p-3 d-flex align-items-center @(deposit.IsExpanded ? "bg-light fw-bold" : "")" 
+                 @onclick="() => deposit.IsExpanded = !deposit.IsExpanded" 
+                 style="cursor:pointer; user-select: none;">
+                
+                <i class="bi @(deposit.IsExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill") me-2 text-primary"></i>
+                <span>@deposit.Name</span>
+            </div>
+
+            @* Expanded Table Section *@
+            @if (deposit.IsExpanded)
+            {
+                <div class="px-4 pb-3">
+                    <table class="table table-sm table-hover mb-0" style="table-layout: fixed;">
+                        <thead>
+                            <tr class="text-muted small">
+                                <th style="width: 50%">Unit Name</th>
+                                <th style="width: 30%">Unit Quantity</th>
+                                <th style="width: 20%"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var unit in deposit.Unit)
+                            {
                                 <tr>
-                                    <th>Unit Name</th>
-                                    <th>Unit Quantity</th>
-                                    <th></th>
+                                    <td class="text-truncate">@unit.Name</td>
+                                    <td>@unit.Quantity</td>
+                                    <td></td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var unit in deposit.Unit)
-                                {
-                                    <tr>
-                                        <td class="text-truncate">@unit.Name</td>
-                                        <td>@unit.Quantity</td>
-                                        <td></td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    }
-            </div> 
-        }
-    </div>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div> 
+    }
+</div>
 }
 
 

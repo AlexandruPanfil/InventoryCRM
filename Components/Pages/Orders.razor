@@ -136,39 +136,60 @@
 
 @if (isDetailsFormVisible)
 {
-    <div class="modal-backdrop" @onclick="() => isDetailsFormVisible = false"></div>
-    <div class="centered-modal">
-        <div class="mb-3">
-            <h3>Order Details</h3>
-        </div>
-        <button class="btn-close btn-close-black position-absolute top-0 end-0 m-3" aria-label="Close" @onclick="() => isDetailsFormVisible = false"></button>
-        <div>
-            <p><strong>Customer:</strong> @openOrder.Customers.Name</p>
-            <p>
-                <strong>Worker:</strong> @if(@openOrder.Worker != null)
+    @if (isDetailsFormVisible && openOrder != null)
+    {
+        <div class="modal-backdrop" @onclick="() => isDetailsFormVisible = false"></div>
+        
+        <div class="centered-modal p-4">
+            <div class="d-flex justify-content-between mb-3">
+                <h3>Order Details</h3>
+                @* <button class="btn btn-secondary" @onclick="() => isDetailsFormVisible = false">Close</button> *@
+
+                <button class="btn-close fs-3" @onclick="() => isDetailsFormVisible = false"></button>
+            </div>
+
+            <div>
+                <label class="fw-bold">Updated at:</label>
+                @* Use a standard input for read-only data *@
+                <input type="text" value="@openOrder.UpdatedAt.ToString("g")" class="form-control" readonly />
+            </div>
+
+            <div class="mt-2">
+                <label class="fw-bold">Customer:</label>
+                <input type="text" value="@openOrder.Customers?.Name" class="form-control" readonly />
+            </div>
+
+            <div class="mt-2">
+                <label class="fw-bold">Worker:</label>
+                <input type="text" value="@openOrder.Worker?.Workername" class="form-control" readonly />
+            </div>
+
+            <div class="mt-2">
+                <label class="fw-bold">Description:</label>
+                <textarea class="form-control" readonly>@openOrder.Description</textarea>
+            </div>
+
+            <hr />
+
+            <h5>Units</h5>
+            <div class="list-group">
+                @if (openOrder.UnitAssignment == null || !openOrder.UnitAssignment.Any())
                 {
-                    @openOrder.Worker.Workername
-                }else
-                {
-                    <span>No Worker Assigned</span>
-                }
-            </p>
-            <p><strong>Description:</strong> @openOrder.Description</p>
-            <p><strong>Units:</strong>
-                @if (openOrder.UnitAssignment != null && openOrder.UnitAssignment.Count > 0)
-                {
-                    foreach (var unit in openOrder.UnitAssignment)
-                    {
-                        <span>@unit.Name (@unit.Quantity) </span>
-                    }
+                    <div class="alert alert-info">No Units Added</div>
                 }
                 else
                 {
-                    <span>No Units</span>
+                    @foreach (var unit in openOrder.UnitAssignment)
+                    {
+                        <div class="list-group-item d-flex justify-content-between">
+                            <span><strong>Name:</strong> @unit.Name</span>
+                            <span><strong>Qty:</strong> @unit.Quantity</span>
+                        </div>
+                    }
                 }
-            </p>
+            </div>
         </div>
-    </div>
+    }
 }
 
 @if (orders == null)
@@ -188,24 +209,31 @@ else if (orders.Count == 0)
 }
 else
 {
-    <div class="list-group">
+    <div class="list-group shadow-sm">
         @foreach (var order in orders)
         {
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-                <div>
-                    <div @onclick="() => OpenOrder(order)" style="cursor:pointer">
-                        <strong>@order.Status Order: </strong> @order.Customers.Name
-                        <p>Created at: @order.CreatedAt</p>
-                        <p><strong>Worker:</strong> @if(@order.Worker != null)
-                            {
-                                @order.Worker.Workername
-                            }else
-                            {
-                                <span>No Worker Assigned</span>
-                            }
-                        </p>
-                        <p>@order.Description</p>
-                    </div> 
+            <div class="list-group-item list-group-item-action py-3" @onclick="() => OpenOrder(order)" style="cursor:pointer">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span>
+                        <strong class="text-primary">@order.Status Order:</strong>
+                        <span class="fw-bold ms-1">@order.Customers?.Name</span>
+                    </span>
+                    <small class="text-muted">@order.CreatedAt.ToString("g")</small>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="small text-secondary">
+                        <i class="bi bi-person me-1"></i>
+                        <strong>Worker:</strong>
+                        @(order.Worker?.Workername ?? "No Worker Assigned")
+                    </span>
+
+                    @if (!string.IsNullOrEmpty(order.Description))
+                    {
+                        <small class="text-muted text-truncate ms-3" style="max-width: 50%;">
+                            @order.Description
+                        </small>
+                    }
                 </div>
             </div>
         }

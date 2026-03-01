@@ -131,22 +131,24 @@ else if (units.Count == 0)
 }
 else
 {
-    <div class="list-group">
+    <div class="list-group shadow-sm">
         @foreach (var unit in units)
         {
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div class="list-group-item d-flex justify-content-between align-items-center py-2">
                 <div>
-                    <strong>@unit.Name</strong>
-                    <small class="text-muted"> (@unit.Quantity)</small>
+                    <span class="fw-bold">@unit.Name</span>
+                    <span class="text-muted small ms-1">(@unit.Quantity)</span>
                 </div>
+
                 <AuthorizeView Policy="CanMoveUnits">
-            <Authorized>
-                <button type="button" class="btn btn-link p-0 minimalist-plus-btn" @onclick="() => OpenAddQuantityForm(unit)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-plus-circle" viewBox="0 0 16 16">
-                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" />
-                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4" />
-                    </svg>
-                </button>
+                    <Authorized>
+                        <button type="button" class="btn btn-link text-primary p-0 text-decoration-none"
+                                @onclick="() => OpenAddQuantityForm(unit)"
+                                title="Add Quantity"
+                                style="font-size: 1.5rem; line-height: 1;">
+                            @* Using a standard Plus Circle Unicode or simple + *@
+                            &#10010;
+                        </button>
                     </Authorized>
                 </AuthorizeView>
             </div>

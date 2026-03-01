@@ -2,22 +2,56 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="container py-5 mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+            @* Hero Section *@
+            <h1 class="display-5 fw-bold text-dark mb-3">Inventory CRM</h1>
+            <p class="lead text-muted mb-5">
+                A streamlined tool for managing field-team equipment, tracking material consumption,
+                and synchronizing worker deposits with the main warehouse.
+            </p>
 
-<p>Welcome to our new app.</p>
+            @* Quick Action Cards *@
+            <div class="row g-4 text-start">
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm p-3">
+                        <div class="card-body">
+                            <h6 class="fw-bold"><i class="bi bi-people me-2 text-primary"></i>Workers</h6>
+                            <p class="small text-muted">Register team members and assign field roles.</p>
+                            <a href="workers" class="btn btn-sm btn-outline-primary stretched-link">Setup Teams</a>
+                        </div>
+                    </div>
+                </div>
 
-<p>This app was made to solve the problem of persons that is responsible for some type of items</p>
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm p-3">
+                        <div class="card-body">
+                            <h6 class="fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Deposits</h6>
+                            <p class="small text-muted">Track mobile inventory held by individual workers.</p>
+                            <a href="deposits" class="btn btn-sm btn-outline-primary stretched-link">Manage Stock</a>
+                        </div>
+                    </div>
+                </div>
 
-<p>Let's imagine, you have some teams that go to the sites/objects and they should do some work, but to do this work they should have some materials/tools.
-   After some time you can forget what they used and which tools was with them, 
-   So this project can help to manage the inventory of workers
-   You can create users that will represent your workers, deposits that will represent the workers itself, there is stored the workers items,
-</p>
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm p-3">
+                        <div class="card-body">
+                            <h6 class="fw-bold"><i class="bi bi-layers me-2 text-primary"></i>Units</h6>
+                            <p class="small text-muted">Define the base materials and tools in your catalog.</p>
+                            <a href="units" class="btn btn-sm btn-outline-primary stretched-link">Define Units</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-<p>Here You can see all the items of worker and You will see all the transactions between them and main deposit</p>
-
-<p><a href="users">Start by creating your users.</a></p>
-
-<p><a href="deposits">Manage your deposits here.</a></p>
-
-<p><a href="units">Get started by creating your units.</a></p>
+            @* Secondary Info *@
+            <div class="mt-5 pt-4 border-top">
+                <p class="text-secondary small">
+                    <i class="bi bi-clock-history me-1"></i>
+                    Real-time transaction tracking between field deposits and central storage.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

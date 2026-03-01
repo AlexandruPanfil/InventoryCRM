@@ -45,3 +45,49 @@
     z-index: 1003;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 }
+
+
+/* Container cleaning */
+.list-group-flush > .list-group-item {
+    border-width: 0 0 1px; /* Only bottom border */
+    background-color: transparent;
+    transition: background 0.15s ease;
+}
+
+/* Subtle Hover */
+.order-row:hover {
+    background-color: #fcfcfc !important;
+}
+
+/* The vertical status bar */
+.status-indicator {
+    position: absolute;
+    left: 0;
+    top: 20%;
+    bottom: 20%;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+}
+
+/* Status Colors */
+.status-bg-success {
+    background-color: #28a745;
+}
+
+.status-bg-warning {
+    background-color: #ffc107;
+}
+
+.status-bg-danger {
+    background-color: #dc3545;
+}
+
+.status-bg-neutral {
+    background-color: #dee2e6;
+}
+
+/* Subtle worker label */
+.worker-tag {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
