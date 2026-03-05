@@ -8,6 +8,8 @@ namespace InventoryCRM.Models
     public class Order
     {
         public Guid Id { get; set; }
+        public uint OrderNumber { get; set; }
+        public string Identifier => $"ORD-{OrderNumber:D6}";
         public string Description { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

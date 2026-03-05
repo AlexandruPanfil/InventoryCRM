@@ -1,4 +1,4 @@
-﻿using InventoryCRM.Models;
+﻿    using InventoryCRM.Models;
 using InventoryCRM.Models.UnitModels;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +15,7 @@ namespace InventoryCRM.Data
         }
         public DbSet<TodoItem> Todos { get; set; }
         public DbSet<Unit> Units { get; set; }
+        public DbSet<ApplicationUser> ApplicationUsers { get; set; }
         public DbSet<UnitAssignment> UnitsAssignment { get; set; }
         public DbSet<Deposit> Deposits { get; set; }
         public DbSet<Worker> Workers { get; set; }
@@ -35,6 +36,12 @@ namespace InventoryCRM.Data
                 entity.Property(e => e.IsCompleted).IsRequired();
                 entity.Property(e => e.Date).IsRequired();
             });
+
+            modelBuilder.Entity<ApplicationUser>()
+            .HasOne(u => u.Worker)
+            .WithOne()
+            .HasForeignKey<ApplicationUser>(u => u.WorkerId)
+            .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Unit>(entity =>
             {
@@ -82,6 +89,7 @@ namespace InventoryCRM.Data
                     .HasColumnType("varchar(100)")
                     .IsRequired();
                 entity.Ignore(e => e.IsExpanded);
+                entity.Ignore(e => e.IsMain);
             });
 
             modelBuilder.Entity<Worker>(entity =>
@@ -137,6 +145,12 @@ namespace InventoryCRM.Data
                 entity.ToTable("Orders");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).ValueGeneratedOnAdd();
+
+                entity.Property(e => e.OrderNumber)
+                      .ValueGeneratedOnAdd()
+                      .UseIdentityByDefaultColumn();
+
+                entity.Ignore(e => e.Identifier);
 
                 entity.Property(e => e.Description)
                       .HasMaxLength(1000)

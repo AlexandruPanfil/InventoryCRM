@@ -7,6 +7,7 @@ namespace InventoryCRM.Models
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public bool IsExpanded { get; set; } = false;
+        public bool IsMain => Id == Guid.Parse("00000000-0000-0000-0000-000000000001");
 
 
         // Many to One to Units
