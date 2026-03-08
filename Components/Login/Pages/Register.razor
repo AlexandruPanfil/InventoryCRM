@@ -6,6 +6,7 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using InventoryCRM.Data
+@using InventoryCRM.Services
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
@@ -14,6 +15,7 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject WorkerService WorkerService
 
 <PageTitle>Register</PageTitle>
 
@@ -83,6 +85,16 @@
         Logger.LogInformation("User created a new account with password.");
 
         var userId = await UserManager.GetUserIdAsync(user);
+
+        // if (Guid.TryParse(userId, out var userGuid))
+        // {
+        //     var existingWorker = await WorkerService.GetUsersAsync(userGuid);
+        //     if (existingWorker == null)
+        //     {
+        //         await WorkerService.CreateUsersAsync(user.Email ?? user.UserName ?? "Unknown", userGuid);
+        //     }
+        // }
+
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(

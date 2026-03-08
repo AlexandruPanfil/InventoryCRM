@@ -48,16 +48,21 @@
             
             if (result.Succeeded)
             {
-                // Assign default role
+                //Assign default role
                 await UserManager.AddToRoleAsync(user, "User");
 
-                // Create the custom User record if it doesn't exist
+                //Create the custom User record if it doesn't exist
                 if (Guid.TryParse(user.Id, out var userGuid))
                 {
                     var existingWorker = await WorkerService.GetUsersAsync(userGuid);
                     if (existingWorker == null)
                     {
                         await WorkerService.CreateUsersAsync(user.Email ?? user.UserName ?? "Unknown", userGuid);
+
+                        user.WorkerId = userGuid;
+                        await UserManager.UpdateAsync(user);
+
+                        await UserManager.AddClaimAsync(user, new System.Security.Claims.Claim("WorkerId", userGuid.ToString()));
                     }
                 }
                 
