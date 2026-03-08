@@ -396,8 +396,8 @@ else
     {
         if(openOrder.Status == OrderStatus.New)
         {   
-            openOrder.SetStatus("Processing");
-            await OrderService.UpdateOrderAsync(openOrder.Id,null,"Processing");
+                return;
+            }
         }
         else if (openOrder.Status == OrderStatus.Processing)
         {
