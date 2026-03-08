@@ -74,7 +74,9 @@ namespace InventoryCRM.Services
                 if (!string.IsNullOrWhiteSpace(status))
                     order.SetStatus(status);
 
-                order.WorkerId = workerId;
+                if (workerId.HasValue) { 
+                    order.WorkerId = workerId;
+                }
                 order.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();

@@ -89,6 +89,15 @@
     display: block;
 }
 
+.nav-link-text {
+    max-width: 150px; 
+    display: inline-block;
+    vertical-align: bottom;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 @media (min-width: 641px) {
     .navbar-toggler {
         display: none;

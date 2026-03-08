@@ -141,10 +141,34 @@
         <div class="modal-backdrop" @onclick="() => isDetailsFormVisible = false"></div>
         
         <div class="centered-modal p-4">
-            <div class="d-flex justify-content-between mb-3">
-                <h3>Order Details</h3>
-                @* <button class="btn btn-secondary" @onclick="() => isDetailsFormVisible = false">Close</button> *@
+            
+                    
 
+            <div class="d-flex justify-content-between mb-3">
+                <div class="d-flex column-gap-3">
+                    <h3>Order Details</h3>
+                @if (openOrder.Status == "New")
+                {
+                    <button class="btn btn-primary" @onclick="(OrderProcesing)">
+                        <i class="bi bi-gear-wide"></i>
+                        <span>To Process</span>
+                    </button>
+                }
+                else if (openOrder.Status == "Processing")
+                {
+                    <button class="btn btn-primary" @onclick="(OrderProcesing)">
+                        <i class="bi bi-check-lg"></i>
+                        <span>Complete Order</span>
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-primary" @onclick="(OrderProcesing)" disabled>
+                        <i class="bi bi-check-all"></i>
+                        <span>Order Completed</span>
+                    </button>
+                }
+                </div>
                 <button class="btn-close fs-3" @onclick="() => isDetailsFormVisible = false"></button>
             </div>
 
@@ -192,6 +216,7 @@
     }
 }
 
+
 @if (orders == null)
 {
     <div class="text-center">
@@ -215,7 +240,7 @@ else
             <div class="list-group-item list-group-item-action py-3" @onclick="() => OpenOrder(order)" style="cursor:pointer">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <span>
-                        <strong class="text-primary">@order.Status Order:</strong>
+                        <strong class="text-primary">@order.Status @order.Identifier :</strong>
                         <span class="fw-bold ms-1">@order.Customers?.Name</span>
                     </span>
                     <small class="text-muted">@order.CreatedAt.ToString("g")</small>
@@ -223,9 +248,9 @@ else
 
                 <div class="d-flex justify-content-between align-items-center">
                     <span class="small text-secondary">
-                        <i class="bi bi-person me-1"></i>
-                        <strong>Worker:</strong>
-                        @(order.Worker?.Workername ?? "No Worker Assigned")
+                            <i class="bi bi-person me-1"></i>
+                            <strong>Worker:</strong>
+                            @(order.Worker?.Workername ?? "No Worker Assigned")
                     </span>
 
                     @if (!string.IsNullOrEmpty(order.Description))
@@ -348,5 +373,40 @@ else
     {
         isDetailsFormVisible = true;
         openOrder = order;
+    }
+
+    //TODO: For Future, to update order details, like add/remove units, change description, change worker etc.
+    private async Task OrderChange()
+    {
+        newOrder.Description = newDescription;
+        if (Guid.TryParse(selectedCustomer, out var customerId))
+        {
+            newOrder.CustomersId = customerId;
+        }
+        newOrder.UnitAssignment = selectedUnits;
+        newOrder.UpdatedAt = DateTime.UtcNow;
+        newOrder.WorkerId = Guid.TryParse(selectedWorker, out var workerId) ? workerId : (Guid?)null;
+        await OrderService.CreateOrderAsync(newOrder);
+        isDetailsFormVisible = false;
+        newOrder = new Order();
+        await LoadOrders();
+    }
+
+    private async Task OrderProcesing()
+    {
+        if(openOrder.Status == OrderStatus.New)
+        {   
+            openOrder.SetStatus("Processing");
+            await OrderService.UpdateOrderAsync(openOrder.Id,null,"Processing");
+        }
+        else if (openOrder.Status == OrderStatus.Processing)
+        {
+            openOrder.SetStatus("Completed");
+            await OrderService.UpdateOrderAsync(openOrder.Id, null, "Completed");
+        }
+        else
+        {
+            return;
+        }
     }
 }
