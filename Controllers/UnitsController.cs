@@ -80,7 +80,7 @@ namespace InventoryCRM.Controllers
             }
 
             var unit = await _unitService.CreateUnitsAsync(trimmedName, request.Quantity, request.DepositId);
-            return CreatedAtAction(nameof(GetUnitAsync), new { id = unit.Id }, MapUnit(unit));
+            return CreatedAtAction("GetUnit", new { id = unit.Id }, MapUnit(unit));
         }
 
         [HttpPut("{id:guid}")]

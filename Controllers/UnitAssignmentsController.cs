@@ -67,7 +67,7 @@ namespace InventoryCRM.Controllers
                 request.Quantity,
                 request.CustomerId);
 
-            return CreatedAtAction(nameof(GetUnitAssignmentAsync), new { id = unit.Id }, MapUnitAssignment(unit));
+            return CreatedAtAction("GetUnitAssignment", new { id = unit.Id }, MapUnitAssignment(unit));
         }
 
         [HttpPut("{id:guid}")]

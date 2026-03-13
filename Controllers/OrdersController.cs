@@ -81,7 +81,7 @@ namespace InventoryCRM.Controllers
                 }
 
                 var createdOrder = await _orderService.CreateOrderAsync(order);
-                return CreatedAtAction(nameof(GetOrderAsync), new { id = createdOrder.Id }, MapOrder(createdOrder));
+                return CreatedAtAction("GetOrder", new { id = createdOrder.Id }, MapOrder(createdOrder));
             }
             catch (ArgumentException ex)
             {

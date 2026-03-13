@@ -63,7 +63,7 @@ namespace InventoryCRM.Controllers
             };
 
             var created = await _customerService.CreateCustomerAsync(customer);
-            return CreatedAtAction(nameof(GetCustomerAsync), new { id = created.Id }, MapCustomer(created));
+            return CreatedAtAction("GetCustomer", new { id = created.Id }, MapCustomer(created));
         }
 
         [HttpPut("{id:guid}")]

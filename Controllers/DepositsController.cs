@@ -61,7 +61,7 @@ namespace InventoryCRM.Controllers
             }
 
             var deposit = await _depositService.CreateDepositsAsync(trimmedName);
-            return CreatedAtAction(nameof(GetDepositAsync), new { id = deposit.Id }, MapDeposit(deposit));
+            return CreatedAtAction("GetDeposit", new { id = deposit.Id }, MapDeposit(deposit));
         }
 
         [HttpPut("{id:guid}")]
