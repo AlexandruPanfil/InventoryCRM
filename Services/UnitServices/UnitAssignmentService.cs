@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using InventoryCRM.Models.UnitModels;
 using InventoryCRM.Data;
 using InventoryCRM.Models;
@@ -59,13 +59,17 @@ namespace InventoryCRM.Services.UnitServices
         }
 
         // For updating an existing reserved unit
-        public async Task<UnitAssignment?> UpdateUnitReservedAsync(Guid id, string name, int quantity)
+        public async Task<UnitAssignment?> UpdateUnitReservedAsync(Guid id, string name, int quantity, string? status = null)
         {
             var unitReserved = await _context.UnitsAssignment.FindAsync(id);
             if (unitReserved != null)
             {
                 unitReserved.Name = name;
                 unitReserved.Quantity = quantity;
+                if (!string.IsNullOrWhiteSpace(status))
+                {
+                    unitReserved.SetStatus(status);
+                }
                 await _context.SaveChangesAsync();
             }
             return unitReserved;
@@ -102,3 +106,4 @@ namespace InventoryCRM.Services.UnitServices
         }
     }
 }
+

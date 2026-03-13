@@ -19,7 +19,7 @@ namespace InventoryCRM.Services
                 .Include(o => o.Customers)
                 .Include(o => o.UnitAssignment)
                 .Include(o => o.Worker)
-                .OrderByDescending(o => o.CreatedAt)
+                .OrderByDescending(o => o.Status)
                 .ToListAsync();
         }
 

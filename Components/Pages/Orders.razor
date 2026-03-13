@@ -1,4 +1,4 @@
-﻿@page "/orders"
+@page "/orders"
 @using InventoryCRM.Data
 @using InventoryCRM.Models
 @using InventoryCRM.Models.UnitModels
@@ -9,7 +9,7 @@
 @inject InventoryCRM.Services.CustomerService CustomerService
 @inject InventoryCRM.Services.WorkerService WorkerService
 @inject InventoryCRM.Services.UnitServices.UnitService UnitService
-@inject InventoryCRM.Services.UnitServices.UnitAssignmentService UnitReservedService
+@inject InventoryCRM.Services.UnitServices.UnitAssignmentService UnitAssignmentService
 @inject IAuthorizationService AuthorizationService
 @rendermode InteractiveServer
 @attribute [Authorize]
@@ -394,19 +394,69 @@ else
 
     private async Task OrderProcesing()
     {
-        if(openOrder.Status == OrderStatus.New)
-        {   
-                return;
-            }
-        }
-        else if (openOrder.Status == OrderStatus.Processing)
+        if (openOrder.Status == OrderStatus.New)
         {
-            openOrder.SetStatus("Completed");
-            await OrderService.UpdateOrderAsync(openOrder.Id, null, "Completed");
+            openOrder.SetStatus(OrderStatus.Processing);
+            await OrderService.UpdateOrderAsync(openOrder.Id, null, OrderStatus.Processing);
+            await LoadOrders();
+            return;
         }
-        else
+
+        if (openOrder.Status != OrderStatus.Processing)
         {
             return;
         }
+
+        var orderToComplete = await OrderService.GetOrderAsync(openOrder.Id);
+        if (orderToComplete == null || !orderToComplete.WorkerId.HasValue)
+        {
+            return;
+        }
+
+        var worker = workers.FirstOrDefault(w => w.Id == orderToComplete.WorkerId.Value);
+        if (worker?.Deposit == null)
+        {
+            return;
+        }
+
+        var workerUnits = (await UnitService.GetAllUnitsAsync())
+            .Where(u => u.DepositId == worker.Deposit.Id)
+            .ToList();
+
+        var orderUnits = orderToComplete.UnitAssignment?.ToList() ?? new List<UnitAssignment>();
+
+        foreach (var orderUnit in orderUnits)
+        {
+            var workerUnit = workerUnits.FirstOrDefault(u => u.Name == orderUnit.Name);
+            if (workerUnit == null || workerUnit.Quantity < orderUnit.Quantity)
+            {
+                return;
+            }
+        }
+
+        foreach (var orderUnit in orderUnits)
+        {
+            var workerUnit = workerUnits.First(u => u.Name == orderUnit.Name);
+            var remainingQuantity = workerUnit.Quantity - orderUnit.Quantity;
+
+            if (remainingQuantity <= 0)
+            {
+                await UnitService.DeleteUnitAsync(workerUnit.Id);
+            }
+            else
+            {
+                await UnitService.UpdateUnitAsync(workerUnit.Id, workerUnit.Name, remainingQuantity);
+            }
+
+            await UnitAssignmentService.UpdateUnitReservedAsync(orderUnit.Id, orderUnit.Name, orderUnit.Quantity, UnitStatus.Installed);
+        }
+
+        orderToComplete.SetStatus(OrderStatus.Finished);
+        await OrderService.UpdateOrderAsync(orderToComplete.Id, null, OrderStatus.Finished);
+
+        openOrder = orderToComplete;
+        await LoadOrders();
     }
 }
+
+
