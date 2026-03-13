@@ -29,6 +29,7 @@ builder.Services.AddScoped<DepositService>();
 builder.Services.AddScoped<WorkerService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddControllers();
 
 
 builder.Services.AddScoped<IdentityUserAccessor>();
@@ -119,12 +120,15 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
 }
 
+app.UseRouting();
 
 app.MapStaticAssets();
 
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
+
+app.MapControllers();
 
 app.MapIdentityApi<ApplicationUser>();
 

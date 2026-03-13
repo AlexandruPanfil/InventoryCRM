@@ -17,7 +17,10 @@ namespace InventoryCRM.Services.UnitServices
         // For getting all reserved units
         public async Task<List<UnitAssignment>> GetAllUnitsReservedAsync()
         {
-            return await _context.UnitsAssignment.OrderBy(u => u.Name).ToListAsync();
+            return await _context.UnitsAssignment
+                .Include(u => u.Customer)
+                .OrderBy(u => u.Name)
+                .ToListAsync();
         }
 
         // For getting all reserved units by customer
@@ -25,6 +28,7 @@ namespace InventoryCRM.Services.UnitServices
         {
             return await _context.UnitsAssignment
                 .Where(u => u.CustomerId == customerId)
+                .Include(u => u.Customer)
                 .OrderBy(u => u.Name)
                 .ToListAsync();
         }
@@ -32,7 +36,9 @@ namespace InventoryCRM.Services.UnitServices
         // For getting a specific reserved unit
         public async Task<UnitAssignment?> GetUnitReservedAsync(Guid id)
         {
-            return await _context.UnitsAssignment.FindAsync(id);
+            return await _context.UnitsAssignment
+                .Include(u => u.Customer)
+                .FirstOrDefaultAsync(u => u.Id == id);
         }
 
         // Find reserved units by name
@@ -40,6 +46,7 @@ namespace InventoryCRM.Services.UnitServices
         {
             return await _context.UnitsAssignment
                 .Where(u => u.Name.Contains(unitName))
+                .Include(u => u.Customer)
                 .OrderBy(u => u.Name)
                 .ToListAsync();
         }
