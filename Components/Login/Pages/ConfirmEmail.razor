@@ -1,5 +1,6 @@
 ﻿@page "/Account/ConfirmEmail"
 
+@using System.ComponentModel.DataAnnotations
 @using System.Text
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
@@ -16,8 +17,27 @@
 <h1>Confirm email</h1>
 <StatusMessage Message="@statusMessage" />
 
+@if (canCreateWorker)
+{
+    <div class="row mt-3">
+        <div class="col-md-5">
+            <EditForm Model="Input" FormName="confirm-email-create-worker" OnValidSubmit="OnValidSubmitAsync" method="post">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" role="alert" />
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.FullName" id="Input.FullName" class="form-control" aria-required="true" placeholder="John Doe" />
+                    <label for="Input.FullName" class="form-label">Full name</label>
+                    <ValidationMessage For="() => Input.FullName" class="text-danger" />
+                </div>
+                <button type="submit" class="w-100 btn btn-primary">Finish confirmation</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
 @code {
     private string? statusMessage;
+    private bool canCreateWorker;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -28,8 +48,13 @@
     [SupplyParameterFromQuery]
     private string? Code { get; set; }
 
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
     protected override async Task OnInitializedAsync()
     {
+        canCreateWorker = false;
+
         if (UserId is null || Code is null)
         {
             RedirectManager.RedirectTo("");
@@ -40,38 +65,89 @@
         {
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
             statusMessage = $"Error loading user with ID {UserId}";
+            return;
         }
-        else
+
+        IdentityResult result = IdentityResult.Success;
+        if (!user.EmailConfirmed)
         {
             var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
-            var result = await UserManager.ConfirmEmailAsync(user, code);
-            
-            if (result.Succeeded)
-            {
-                //Assign default role
-                await UserManager.AddToRoleAsync(user, "User");
-
-                //Create the custom User record if it doesn't exist
-                if (Guid.TryParse(user.Id, out var userGuid))
-                {
-                    var existingWorker = await WorkerService.GetUsersAsync(userGuid);
-                    if (existingWorker == null)
-                    {
-                        await WorkerService.CreateUsersAsync(user.Email ?? user.UserName ?? "Unknown", userGuid);
-
-                        user.WorkerId = userGuid;
-                        await UserManager.UpdateAsync(user);
-
-                        await UserManager.AddClaimAsync(user, new System.Security.Claims.Claim("WorkerId", userGuid.ToString()));
-                    }
-                }
-                
-                statusMessage = "Thank you for confirming your email.";
-            }
-            else
-            {
-                statusMessage = "Error confirming your email.";
-            }
+            result = await UserManager.ConfirmEmailAsync(user, code);
         }
+
+        if (!result.Succeeded)
+        {
+            statusMessage = "Error confirming your email.";
+            return;
+        }
+
+        if (!await UserManager.IsInRoleAsync(user, "User"))
+        {
+            await UserManager.AddToRoleAsync(user, "User");
+        }
+
+        if (!Guid.TryParse(user.Id, out var userGuid))
+        {
+            statusMessage = "Error while preparing your account.";
+            return;
+        }
+
+        var existingWorker = await WorkerService.GetUsersAsync(userGuid);
+        if (existingWorker != null)
+        {
+            statusMessage = "Thank you for confirming your email.";
+            return;
+        }
+
+        canCreateWorker = true;
+        statusMessage = "Email confirmed. Please enter your full name to finish account setup.";
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        if (UserId is null)
+        {
+            statusMessage = "Unable to finish account setup.";
+            canCreateWorker = false;
+            return;
+        }
+
+        var user = await UserManager.FindByIdAsync(UserId);
+        if (user is null || !Guid.TryParse(user.Id, out var userGuid))
+        {
+            statusMessage = "Unable to finish account setup.";
+            canCreateWorker = false;
+            return;
+        }
+
+        var existingWorker = await WorkerService.GetUsersAsync(userGuid);
+        if (existingWorker != null)
+        {
+            statusMessage = "Your account setup is already complete.";
+            canCreateWorker = false;
+            return;
+        }
+
+        var fullName = Input.FullName.Trim();
+        await WorkerService.CreateUsersAsync(fullName, userGuid);
+
+        user.WorkerId = userGuid;
+        await UserManager.UpdateAsync(user);
+
+        var userClaims = await UserManager.GetClaimsAsync(user);
+        if (!userClaims.Any(c => c.Type == "WorkerId" && c.Value == userGuid.ToString()))
+        {
+            await UserManager.AddClaimAsync(user, new System.Security.Claims.Claim("WorkerId", userGuid.ToString()));
+        }
+
+        canCreateWorker = false;
+        statusMessage = "Thank you for confirming your email.";
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [StringLength(100)]
+        public string FullName { get; set; } = string.Empty;
     }
 }
