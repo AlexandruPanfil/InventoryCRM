@@ -1,29 +1,34 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using InventoryCRM.Data;
 using InventoryCRM.Models;
-using InventoryCRM.Data;
 using InventoryCRM.Models.UnitModels;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 
 
 namespace InventoryCRM.Services.UnitServices
 {
     public class UnitService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
 
-        public UnitService(ApplicationDbContext context)
+        public UnitService(IDbContextFactory<ApplicationDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
 
         // For getting all units
         public async Task<List<Unit>> GetAllUnitsAsync()
         {
+            using var _context = await _contextFactory.CreateDbContextAsync();
+
             return await _context.Units.OrderBy(u => u.Name).ToListAsync();
         }
 
         // For getting all units name by quantity
         public async Task<List<Unit>> GetAllUnitsNameAndQuantityAsync()
         {
+            using var _context = await _contextFactory.CreateDbContextAsync();
+
             var rawUnits =  _context.Units.OrderBy(u => u.Name).ToListAsync();
             var units = new List<Unit>();
             foreach (var unit in await rawUnits)
@@ -48,6 +53,8 @@ namespace InventoryCRM.Services.UnitServices
         // For getting deposits by unit name
         public async Task<List<Deposit>> GetDepositsByUnitNameAsync(string unitName)
         {
+            using var _context = await _contextFactory.CreateDbContextAsync();
+
             if (string.IsNullOrWhiteSpace(unitName))
                 return new List<Deposit>();
 
@@ -62,12 +69,16 @@ namespace InventoryCRM.Services.UnitServices
         // For getting an units
         public async Task<Unit> GetUnitsAsync(Guid id)
         {
+            using var _context = await _contextFactory.CreateDbContextAsync();
+
             return await _context.Units.FindAsync(id);
         }
 
         //Find units by Name
         public async Task<List<Unit>> FindUnitsAsync(string unitname)
         {
+            using var _context = await _contextFactory.CreateDbContextAsync();
+
             return await _context.Units
                 .Where(u => u.Name.Contains(unitname))
                 .OrderBy(u => u.Name)
@@ -77,6 +88,8 @@ namespace InventoryCRM.Services.UnitServices
         // For creating a new unit
         public async Task<Unit> CreateUnitsAsync(string name, int quantity, Guid depositId)
         {
+            using var _context = await _contextFactory.CreateDbContextAsync();
+
             var unit = new Unit
             {
                 Name = name,
@@ -91,6 +104,8 @@ namespace InventoryCRM.Services.UnitServices
         // For updating an existing unit
         public async Task<Unit> UpdateUnitAsync(Guid id, string name, int quantity)
         {
+            using var _context = await _contextFactory.CreateDbContextAsync();
+
             var unit = await _context.Units.FindAsync(id);
             if (unit != null)
             {
@@ -104,6 +119,8 @@ namespace InventoryCRM.Services.UnitServices
         // For deleting an existing unit
         public async Task DeleteUnitAsync(Guid id)
         {
+            using var _context = await _contextFactory.CreateDbContextAsync();
+
             var unit = await _context.Units.FindAsync(id);
             if (unit != null)
             {
@@ -114,6 +131,8 @@ namespace InventoryCRM.Services.UnitServices
 
         public async Task<List<Deposit>> GetDepositIdAsync()
         {
+            using var _context = await _contextFactory.CreateDbContextAsync();
+
             return await _context.Deposits
                 .OrderBy(d => d.Name)
                 .ToListAsync();
@@ -121,6 +140,8 @@ namespace InventoryCRM.Services.UnitServices
 
         public async Task<bool> IsUnitInDepositAsync(Guid unitId, Guid depositID)
         {
+            using var _context = await _contextFactory.CreateDbContextAsync();
+
             var unit = await _context.Units.FindAsync(unitId);
             if (unit != null && unit.DepositId == depositID)
             {

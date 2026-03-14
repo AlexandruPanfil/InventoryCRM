@@ -7,15 +7,17 @@ namespace InventoryCRM.Services
 {
     public class DepositService
     {
-        private readonly ApplicationDbContext _context;
-        public DepositService(ApplicationDbContext context)
+        private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
+        public DepositService(IDbContextFactory<ApplicationDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
 
         //For Read All Deposits With Units
         public async Task<List<Deposit>> GetAllDepositsAsync()
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             return await _context.Deposits
                 .Include(i => i.Unit)
                 .OrderBy(d => d.Name).ToListAsync();
@@ -24,6 +26,8 @@ namespace InventoryCRM.Services
         //For Read One Deposits With Units
         public async Task<List<Deposit>> GetOneDepositsAsync(Guid id)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             return await _context.Deposits
                 .Where(d => d.Id == id)
                 .Include(i => i.Unit)
@@ -33,12 +37,16 @@ namespace InventoryCRM.Services
         //For Read by Id
         public async Task<Deposit> GetDepositsAsync(Guid id)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             return await _context.Deposits.FindAsync(id);
         }
 
         //For Find by Name
         public async Task<List<Deposit>> FindDepositsAsync(string depositname)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             return await _context.Deposits
                 .Where(d => d.Name.Contains(depositname))
                 .OrderBy(d => d.Name)
@@ -48,6 +56,8 @@ namespace InventoryCRM.Services
         //For Create
         public async Task<Deposit> CreateDepositsAsync(string name)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             var deposit = new Deposit
             {
                 Name = name
@@ -60,6 +70,8 @@ namespace InventoryCRM.Services
         //For Update Name
         public async Task<Deposit> UpdateDepositsAsync(Guid id, string name)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             var deposit = await _context.Deposits.FindAsync(id);
             if (deposit != null)
             {
@@ -72,6 +84,8 @@ namespace InventoryCRM.Services
         //For Update Units FRom Deposit Side
         public async Task<Deposit> UpdateDepositsUnitsAsync(Guid sourceID, Guid destinationID, ICollection<Unit> units)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             var sourceDeposit = await _context.Deposits
                 .Include(d => d.Unit)
                 .FirstOrDefaultAsync(d => d.Id == sourceID);
@@ -141,6 +155,8 @@ namespace InventoryCRM.Services
         //For Delete
         public async Task DeleteDepositsAsync(Guid id)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             var deposit = await _context.Deposits.FindAsync(id);
             if (deposit != null)
             {

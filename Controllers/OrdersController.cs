@@ -96,7 +96,8 @@ namespace InventoryCRM.Controllers
             {
                 var description = request.Description?.Trim();
                 var status = request.Status?.Trim();
-                var updatedOrder = await _orderService.UpdateOrderAsync(id, description, status, request.WorkerId);
+                string workerId = request.WorkerId.ToString();
+                var updatedOrder = await _orderService.UpdateOrderAsync(id, description, status, null, null, workerId);
                 if (updatedOrder == null)
                 {
                     return NotFound();

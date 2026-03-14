@@ -7,17 +7,20 @@ namespace InventoryCRM.Services
 {
     public class TodoService
     {
-        private readonly ApplicationDbContext _context;
-        public TodoService(ApplicationDbContext context)
+        private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
+        public TodoService(IDbContextFactory<ApplicationDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
         public async Task<List<TodoItem>> GetAllTodosAsync()
         {
+            using var _context = _contextFactory.CreateDbContext();
             return await _context.Todos.OrderByDescending(t => t.Date).ToListAsync();
         }
         public async Task<TodoItem> CreateTodoAsync(string title)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             var task = new TodoItem
             {
                 Todo = title,
@@ -30,6 +33,8 @@ namespace InventoryCRM.Services
         }
         public async Task ToggleTodoAsync(int id)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             var task = await _context.Todos.FindAsync(id);
             if (task != null)
             {
@@ -39,6 +44,8 @@ namespace InventoryCRM.Services
         }
         public async Task DeleteTodoAsync(int id)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             var task = await _context.Todos.FindAsync(id);
             if (task != null)
             {

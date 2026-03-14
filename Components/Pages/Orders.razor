@@ -5,6 +5,7 @@
 @using InventoryCRM.Services
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
 @inject InventoryCRM.Services.OrderService OrderService
 @inject InventoryCRM.Services.CustomerService CustomerService
 @inject InventoryCRM.Services.WorkerService WorkerService
@@ -14,8 +15,15 @@
 @rendermode InteractiveServer
 @attribute [Authorize]
 
-<PageTitle>Customers</PageTitle>
+<PageTitle>Orders</PageTitle>
 <h3>Orders</h3>
+
+@if (!string.IsNullOrEmpty(orderConcurrencyError))
+{
+    <div class="alert alert-warning mb-3">
+        @orderConcurrencyError
+    </div>
+}
 
 <div class="mb-3">
     <div class="input-group">
@@ -45,16 +53,54 @@
     <div class="modal-backdrop" @onclick="() => isFormVisible = false"></div>
 
     <div class="centered-modal">
-        <EditForm Model="newOrder" OnValidSubmit="CreateOrder">
+        <EditForm Model="newOrder" OnValidSubmit="HandleSubmit">
             <div class="mb-3">
-                <h3>Create New Order</h3>
-                <button class="btn btn-primary" type="submit">Save</button>
-                <button class="btn btn-secondary" type="button" @onclick="() => isSecondFormVisible = true"> Add Unit</button>
+                <h3>
+                    @(CurrentMode == FormMode.Create ? "Create New Order" :
+                      CurrentMode == FormMode.Update ? "Edit Order" : "View Order")
+                </h3>
+
+                @if (ShowActions && newOrder.Status == null)
+                {
+                    <button class="btn btn-primary" type="submit">Save</button>
+                    <button class="btn btn-secondary" type="button" @onclick="() => isSecondFormVisible = true">Add Unit</button>
+                }
+
+                @if (ShowActions && newOrder.Status == "New")
+                {
+                    <button class="btn btn-primary" @onclick="(UpdateOrder)">
+                        <i class="bi bi-gear-wide"></i>
+                        <span>Update</span>
+                    </button>
+
+                    <button class="btn btn-primary" @onclick="(OrderProcesing)">
+                        <i class="bi bi-gear-wide"></i>
+                        <span>To Process</span>
+                    </button>
+
+                    <button class="btn btn-secondary" type="button" @onclick="() => isSecondFormVisible = true">Add Unit</button>
+
+                }
+                else if (ShowActions && newOrder.Status == "Processing")
+                {
+                    <button class="btn btn-primary" @onclick="(OrderProcesing)">
+                        <i class="bi bi-check-lg"></i>
+                        <span>Complete Order</span>
+                    </button>
+                }
+                else
+                {
+                    <button class="btn btn-primary" @onclick="(OrderProcesing)" disabled>
+                        <i class="bi bi-check-all"></i>
+                        <span>Order Completed</span>
+                    </button>
+                }
+
             </div>
             <button class="btn-close btn-close-black position-absolute top-0 end-0 m-3" aria-label="Close" @onclick="() => isFormVisible = false"></button>
             <div>
                 <div class="mb-2">Customer</div>
-                <InputSelect @bind-Value="selectedCustomer" class="form-control">
+                <InputSelect @bind-Value="selectedCustomer" class="form-control" disabled="@IsReadOnly">
                     <option value="">Select Customer</option>
                     @foreach (var customer in customers)
                     {
@@ -64,7 +110,7 @@
             </div>
             <div>
                 <div class="mb-2">Worker</div>
-                <InputSelect @bind-Value="selectedWorker" class="form-control">
+                <InputSelect @bind-Value="selectedWorker" class="form-control" disabled="@IsReadOnly">
                     <option value="">Select Worker</option>
                     @foreach (var worker in workers)
                     {
@@ -74,7 +120,7 @@
             </div>
             <div>
                 <div class="mb-2">Description:</div>
-                <InputText @bind-Value="newDescription" class="form-control" />
+                <InputText @bind-Value="newDescription" class="form-control" readonly="@IsReadOnly" />
             </div>
             <div class="list-group">
                 @if (selectedUnits == null)
@@ -93,7 +139,10 @@
                             <div class="unit-list-item row g-3">
                                 <span class="me-3 col-4"><strong>Unit Name:</strong> @unit.Name</span>
                                 <span class="me-3 col-4"><strong>Unit Quantity:</strong> @unit.Quantity</span>
-                                <button class="btn btn-danger col-1" type="button" @onclick="() => selectedUnits.Remove(unit)">Remove</button>
+                                @if (ShowActions)
+                                {
+                                    <button class="btn btn-danger col-1" type="button" @onclick="() => selectedUnits.Remove(unit)">Remove</button>
+                                }
                             </div>
                         </div>
                     }
@@ -133,88 +182,6 @@
     </div>
 }
 
-
-@if (isDetailsFormVisible)
-{
-    @if (isDetailsFormVisible && openOrder != null)
-    {
-        <div class="modal-backdrop" @onclick="() => isDetailsFormVisible = false"></div>
-        
-        <div class="centered-modal p-4">
-            
-                    
-
-            <div class="d-flex justify-content-between mb-3">
-                <div class="d-flex column-gap-3">
-                    <h3>Order Details</h3>
-                @if (openOrder.Status == "New")
-                {
-                    <button class="btn btn-primary" @onclick="(OrderProcesing)">
-                        <i class="bi bi-gear-wide"></i>
-                        <span>To Process</span>
-                    </button>
-                }
-                else if (openOrder.Status == "Processing")
-                {
-                    <button class="btn btn-primary" @onclick="(OrderProcesing)">
-                        <i class="bi bi-check-lg"></i>
-                        <span>Complete Order</span>
-                    </button>
-                }
-                else
-                {
-                    <button class="btn btn-primary" @onclick="(OrderProcesing)" disabled>
-                        <i class="bi bi-check-all"></i>
-                        <span>Order Completed</span>
-                    </button>
-                }
-                </div>
-                <button class="btn-close fs-3" @onclick="() => isDetailsFormVisible = false"></button>
-            </div>
-
-            <div>
-                <label class="fw-bold">Updated at:</label>
-                @* Use a standard input for read-only data *@
-                <input type="text" value="@openOrder.UpdatedAt.ToString("g")" class="form-control" readonly />
-            </div>
-
-            <div class="mt-2">
-                <label class="fw-bold">Customer:</label>
-                <input type="text" value="@openOrder.Customers?.Name" class="form-control" readonly />
-            </div>
-
-            <div class="mt-2">
-                <label class="fw-bold">Worker:</label>
-                <input type="text" value="@openOrder.Worker?.Workername" class="form-control" readonly />
-            </div>
-
-            <div class="mt-2">
-                <label class="fw-bold">Description:</label>
-                <textarea class="form-control" readonly>@openOrder.Description</textarea>
-            </div>
-
-            <hr />
-
-            <h5>Units</h5>
-            <div class="list-group">
-                @if (openOrder.UnitAssignment == null || !openOrder.UnitAssignment.Any())
-                {
-                    <div class="alert alert-info">No Units Added</div>
-                }
-                else
-                {
-                    @foreach (var unit in openOrder.UnitAssignment)
-                    {
-                        <div class="list-group-item d-flex justify-content-between">
-                            <span><strong>Name:</strong> @unit.Name</span>
-                            <span><strong>Qty:</strong> @unit.Quantity</span>
-                        </div>
-                    }
-                }
-            </div>
-        </div>
-    }
-}
 
 
 @if (orders == null)
@@ -275,7 +242,7 @@ else
     private Order newOrder = new Order();
     private string newDescription = string.Empty;
 
-    private Order openOrder = new Order();
+    // private Order openOrder = new Order();
 
     private List<Customer> customers = new List<Customer>();
     private string selectedCustomer = string.Empty;
@@ -292,6 +259,13 @@ else
     private int unitQuantity = 0;
     private static readonly Guid unitDefaultDepositId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
+    public enum FormMode { Create, Update, ReadOnly }
+
+    [Parameter] public FormMode CurrentMode { get; set; } = FormMode.Create;
+
+    bool IsReadOnly => CurrentMode == FormMode.ReadOnly;
+    bool IsEditable => CurrentMode == FormMode.Create || CurrentMode == FormMode.Update;
+    bool ShowActions => CurrentMode != FormMode.ReadOnly;
 
     private string filteredName = string.Empty;
     private bool isFormVisible = false;
@@ -299,6 +273,7 @@ else
     private bool isDetailsFormVisible = false;
 
     private bool advanced = false;
+    private string? orderConcurrencyError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -344,6 +319,7 @@ else
         await OrderService.CreateOrderAsync(newOrder);
         isFormVisible = false;
         newOrder = new Order();
+        selectedUnits = new List<UnitAssignment>();
         await LoadOrders();
     }
 
@@ -357,7 +333,7 @@ else
 
         selectedUnits.Add(new UnitAssignment
         {
-            Id = new Guid(),
+            Id = Guid.Empty,
             Name = unitToTransfer.Name,
             Quantity = unitQuantity,
             CustomerId = customerId
@@ -371,43 +347,61 @@ else
 
     private void OpenOrder(Order order)
     {
-        isDetailsFormVisible = true;
-        openOrder = order;
+        if (order.Status == OrderStatus.Finished || order.Status == OrderStatus.Processing)
+        {
+            CurrentMode = FormMode.ReadOnly;
+        }
+        else
+        {
+            CurrentMode = FormMode.Update;
+        }
+
+        newOrder = order;
+        isFormVisible = true;
+        selectedCustomer = newOrder.CustomersId.ToString();
+        selectedUnits = newOrder.UnitAssignment?.ToList() ?? new List<UnitAssignment>();
+        selectedWorker = newOrder.WorkerId.HasValue ? order.WorkerId.ToString() : string.Empty;
+        newDescription = newOrder.Description;
     }
 
-    //TODO: For Future, to update order details, like add/remove units, change description, change worker etc.
-    private async Task OrderChange()
+    private async Task HandleSubmit()
     {
-        newOrder.Description = newDescription;
-        if (Guid.TryParse(selectedCustomer, out var customerId))
-        {
-            newOrder.CustomersId = customerId;
-        }
-        newOrder.UnitAssignment = selectedUnits;
-        newOrder.UpdatedAt = DateTime.UtcNow;
-        newOrder.WorkerId = Guid.TryParse(selectedWorker, out var workerId) ? workerId : (Guid?)null;
-        await OrderService.CreateOrderAsync(newOrder);
-        isDetailsFormVisible = false;
+        isFormVisible = false;
         newOrder = new Order();
         await LoadOrders();
     }
 
+    private async Task UpdateOrder()
+    {
+        try
+        {
+            await OrderService.UpdateOrderAsync(newOrder.Id, newDescription, null, selectedUnits, selectedCustomer, selectedWorker);
+            orderConcurrencyError = null;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            orderConcurrencyError = "The order was updated elsewhere. The latest data has been reloaded; reopen the order to try again.";
+        }
+
+        await HandleSubmit();
+    }
+
     private async Task OrderProcesing()
     {
-        if (openOrder.Status == OrderStatus.New)
+        if (newOrder.Status == OrderStatus.New)
         {
-            openOrder.SetStatus(OrderStatus.Processing);
-            await OrderService.UpdateOrderAsync(openOrder.Id, null, OrderStatus.Processing);
+            newOrder.SetStatus(OrderStatus.Processing);
+            await OrderService.UpdateOrderAsync(newOrder.Id, OrderStatus.Processing);
             await LoadOrders();
             return;
         }
 
-        if (openOrder.Status != OrderStatus.Processing)
+        if (newOrder.Status != OrderStatus.Processing)
         {
             return;
         }
 
-        var orderToComplete = await OrderService.GetOrderAsync(openOrder.Id);
+        var orderToComplete = await OrderService.GetOrderAsync(newOrder.Id);
         if (orderToComplete == null || !orderToComplete.WorkerId.HasValue)
         {
             return;
@@ -452,9 +446,9 @@ else
         }
 
         orderToComplete.SetStatus(OrderStatus.Finished);
-        await OrderService.UpdateOrderAsync(orderToComplete.Id, null, OrderStatus.Finished);
+        await OrderService.UpdateOrderAsync(orderToComplete.Id, OrderStatus.Finished);
 
-        openOrder = orderToComplete;
+        newOrder = orderToComplete;
         await LoadOrders();
     }
 }

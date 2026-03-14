@@ -6,16 +6,18 @@ namespace InventoryCRM.Services
 {
     public class WorkerService
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
 
-        public WorkerService(ApplicationDbContext context)
+        public WorkerService(IDbContextFactory<ApplicationDbContext> contextFactory)
         {
-            _context = context;
+            _contextFactory = contextFactory;
         }
 
         //For Read
         public async Task<List<Worker>> GetAllUsersAsync()
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             return await _context.Workers
                 .Include(u => u.Deposit)
                 .OrderBy(d => d.Workername).ToListAsync();
@@ -24,12 +26,16 @@ namespace InventoryCRM.Services
         //For Read by Id
         public async Task<Worker> GetUsersAsync(Guid id)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             return await _context.Workers.FindAsync(id);
         }
 
         //For Read
         public async Task<List<Worker>> FindUsersByNameAsync(string username)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             return await _context.Workers
                 .Where(u => u.Workername.Contains(username))
                 .OrderBy(u => u.Workername)
@@ -39,6 +45,8 @@ namespace InventoryCRM.Services
         //For Create
         public async Task<Worker> CreateUsersAsync(string workername, Guid? userId = null)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             var newWorker = new Worker
             {
                 Workername = workername
@@ -66,6 +74,8 @@ namespace InventoryCRM.Services
         //For Update
         public async Task<Worker> UpdateUsersAsync(Guid id, string username)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             var worker = await _context.Workers.FindAsync(id);
             if (worker != null)
             {
@@ -78,6 +88,8 @@ namespace InventoryCRM.Services
         //For Delete
         public async Task DeleteUsersAsync(Guid id)
         {
+            using var _context = _contextFactory.CreateDbContext();
+
             var worker = await _context.Workers.FindAsync(id);
             if (worker != null)
             {
