@@ -22,6 +22,9 @@
 {
     <div class="alert alert-warning mb-3">
         @orderConcurrencyError
+        <button class="btn btn-sm btn-secondary ms-3" @onclick="() => orderConcurrencyError = null">
+            <i class="bi bi-x-lg"></i>
+        </button>
     </div>
 }
 
@@ -37,7 +40,7 @@
         </button>
         <AuthorizeView Policy="Advanced">
             <Authorized>
-                <button class="btn btn-primary" @onclick="() => isFormVisible = true">
+                <button class="btn btn-primary" @onclick="(OpenCreateForm)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
                         <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2" />
                     </svg>
@@ -60,37 +63,36 @@
                       CurrentMode == FormMode.Update ? "Edit Order" : "View Order")
                 </h3>
 
-                @if (ShowActions && newOrder.Status == null)
+                @if (CurrentMode == FormMode.Create)
                 {
-                    <button class="btn btn-primary" type="submit">Save</button>
+                    <button class="btn btn-primary" type="button" @onclick="CreateOrder">Save</button>
                     <button class="btn btn-secondary" type="button" @onclick="() => isSecondFormVisible = true">Add Unit</button>
                 }
-
-                @if (ShowActions && newOrder.Status == "New")
+                else if (IsEditable && newOrder.Status == "New")
                 {
-                    <button class="btn btn-primary" @onclick="(UpdateOrder)">
+                    <button class="btn btn-primary" type="button" @onclick="UpdateOrder">
                         <i class="bi bi-gear-wide"></i>
                         <span>Update</span>
                     </button>
 
-                    <button class="btn btn-primary" @onclick="(OrderProcesing)">
+                    <button class="btn btn-primary" type="button" @onclick="OrderProcesing">
                         <i class="bi bi-gear-wide"></i>
                         <span>To Process</span>
                     </button>
 
                     <button class="btn btn-secondary" type="button" @onclick="() => isSecondFormVisible = true">Add Unit</button>
 
-                }
-                else if (ShowActions && newOrder.Status == "Processing")
+                } 
+                else if (IsEditable && newOrder.Status == "Processing")
                 {
-                    <button class="btn btn-primary" @onclick="(OrderProcesing)">
+                    <button class="btn btn-primary" type="button" @onclick="OrderProcesing">
                         <i class="bi bi-check-lg"></i>
                         <span>Complete Order</span>
                     </button>
                 }
                 else
                 {
-                    <button class="btn btn-primary" @onclick="(OrderProcesing)" disabled>
+                    <button class="btn btn-primary" type="button" @onclick="OrderProcesing" disabled>
                         <i class="bi bi-check-all"></i>
                         <span>Order Completed</span>
                     </button>
@@ -183,7 +185,6 @@
 }
 
 
-
 @if (orders == null)
 {
     <div class="text-center">
@@ -210,7 +211,7 @@ else
                         <strong class="text-primary">@order.Status @order.Identifier :</strong>
                         <span class="fw-bold ms-1">@order.Customers?.Name</span>
                     </span>
-                    <small class="text-muted">@order.CreatedAt.ToString("g")</small>
+                    <small class="text-muted">@order.UpdatedAt.ToString("g")</small>
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center">
@@ -264,13 +265,14 @@ else
     [Parameter] public FormMode CurrentMode { get; set; } = FormMode.Create;
 
     bool IsReadOnly => CurrentMode == FormMode.ReadOnly;
-    bool IsEditable => CurrentMode == FormMode.Create || CurrentMode == FormMode.Update;
+    bool IsEditable => CurrentMode == FormMode.Update;
     bool ShowActions => CurrentMode != FormMode.ReadOnly;
 
     private string filteredName = string.Empty;
     private bool isFormVisible = false;
     private bool isSecondFormVisible = false;
-    private bool isDetailsFormVisible = false;
+    // private bool isDetailsFormVisible = false;
+    private bool isSubmitting = false;
 
     private bool advanced = false;
     private string? orderConcurrencyError;
@@ -317,27 +319,36 @@ else
         newOrder.WorkerId = Guid.TryParse(selectedWorker, out var workerId) ? workerId : (Guid?)null;
 
         await OrderService.CreateOrderAsync(newOrder);
-        isFormVisible = false;
+
+        // isFormVisible = false;
         newOrder = new Order();
         selectedUnits = new List<UnitAssignment>();
-        await LoadOrders();
+        selectedCustomer = string.Empty;
+        selectedWorker = string.Empty;
+        newDescription = string.Empty;
+
+        await HandleSubmit();
     }
 
     private void ConvertUnitsToList()
     {
         if (selectedUnits == null) selectedUnits = new List<UnitAssignment>();
 
-        Guid.TryParse(selectedCustomer, out var customerId);
+        if(Guid.TryParse(selectedCustomer, out var customerId)){
 
-        var unitToTransfer = units.FirstOrDefault(u => u.Id == unitID);
+            var unitToTransfer = units.FirstOrDefault(u => u.Id == unitID);
 
-        selectedUnits.Add(new UnitAssignment
-        {
-            Id = Guid.Empty,
-            Name = unitToTransfer.Name,
-            Quantity = unitQuantity,
-            CustomerId = customerId
-        });
+            selectedUnits.Add(new UnitAssignment
+            {
+                //ChatGPT
+                Id = Guid.Empty,
+                // Gemini
+                // Id = Guid.NewGuid(),
+                Name = unitToTransfer.Name,
+                Quantity = unitQuantity,
+                CustomerId = customerId
+            });
+        }
 
         unitID = Guid.Empty;
         unitName = string.Empty;
@@ -355,35 +366,53 @@ else
         {
             CurrentMode = FormMode.Update;
         }
-
         newOrder = order;
         isFormVisible = true;
+    
         selectedCustomer = newOrder.CustomersId.ToString();
-        selectedUnits = newOrder.UnitAssignment?.ToList() ?? new List<UnitAssignment>();
-        selectedWorker = newOrder.WorkerId.HasValue ? order.WorkerId.ToString() : string.Empty;
+        // Create a NEW list of NEW objects to avoid reference issues
+        selectedUnits = order.UnitAssignment?.Select(u => new UnitAssignment {
+            Id = u.Id,
+            Name = u.Name,
+            Quantity = u.Quantity,
+            CustomerId = u.CustomerId,
+            }).ToList() ?? new List<UnitAssignment>();
+    
+        selectedWorker = newOrder.WorkerId?.ToString() ?? string.Empty;
         newDescription = newOrder.Description;
     }
 
     private async Task HandleSubmit()
     {
         isFormVisible = false;
+        isSubmitting = false;
         newOrder = new Order();
+        selectedUnits = new List<UnitAssignment>();
         await LoadOrders();
+        StateHasChanged();
     }
 
     private async Task UpdateOrder()
     {
-        try
-        {
+        if (isSubmitting) return; // Prevent double clicks
+        isSubmitting = true;
+
+        try{
             await OrderService.UpdateOrderAsync(newOrder.Id, newDescription, null, selectedUnits, selectedCustomer, selectedWorker);
             orderConcurrencyError = null;
+            await HandleSubmit();
         }
         catch (DbUpdateConcurrencyException)
         {
-            orderConcurrencyError = "The order was updated elsewhere. The latest data has been reloaded; reopen the order to try again.";
+            orderConcurrencyError = "The order was modified by another user. Please reload and try again.";
+            await LoadOrders();
+        }
+        finally
+        {
+            isSubmitting = false;
         }
 
-        await HandleSubmit();
+        // await HandleSubmit();
     }
 
     private async Task OrderProcesing()
@@ -450,6 +479,11 @@ else
 
         newOrder = orderToComplete;
         await LoadOrders();
+    }
+
+    private void OpenCreateForm(){
+        isFormVisible = true;
+        CurrentMode = FormMode.Create;
     }
 }
 

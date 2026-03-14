@@ -97,11 +97,9 @@ namespace InventoryCRM.Services
             var order = await _context.Orders
                 .Include(o => o.UnitAssignment)
                 .FirstOrDefaultAsync(u => u.Id == id);
-                
+
             if (order != null)
             {
-                order.UnitAssignment ??= new List<UnitAssignment>();
-
                 var selectedUnitList = selectedUnits?.ToList() ?? new List<UnitAssignment>();
 
                 if (!string.IsNullOrWhiteSpace(description))
@@ -110,24 +108,34 @@ namespace InventoryCRM.Services
                 if (!string.IsNullOrWhiteSpace(status))
                     order.SetStatus(status);
 
+                if (customerId != null)
+                {
+                    Guid temp = Guid.Parse(customerId);
+                    order.CustomersId = temp;
+                }
+
+                if (workerId != null)
+                {
+                    Guid temp = Guid.Parse(workerId);
+                    order.WorkerId = temp;
+                }
+
+                order.UpdatedAt = DateTime.UtcNow;
+
 
                 //Units Synchronization Logic:
 
-                //Check ID of each unit from the UI, if it exists in the DB, update it, if not, add it.
-                var selectedIds = selectedUnitList
-                .Where(u => u.Id != Guid.Empty)
-                .Select(u => u.Id)
-                .ToHashSet();
+                var uiUnits = selectedUnits.ToList() ?? new List<UnitAssignment>();
+                var uiIds = uiUnits.Select(u => u.Id).ToHashSet();
 
                 // Find units that are in the DB but not in the selected list (i.e., removed in the UI)
                 var unitsToRemove = order.UnitAssignment!
-                    .Where(u => !selectedIds.Contains(u.Id))
+                    .Where(u => !uiIds.Contains(u.Id))
                     .ToList();
 
                 // Remove units that are no longer selected in the UI
                 foreach (var unit in unitsToRemove)
                 {
-                    order.UnitAssignment!.Remove(unit);
                     _context.UnitsAssignment.Remove(unit);
                 }
 
@@ -136,48 +144,49 @@ namespace InventoryCRM.Services
                 {
                     if (uiUnit.Id == Guid.Empty)
                     {
-                        uiUnit.Id = Guid.NewGuid();
-                    }
-
-                    var dbUnit = order.UnitAssignment.FirstOrDefault(u => u.Id == uiUnit.Id);
-
-                    if (dbUnit != null)
-                    {
-                        // Update existing unit values
-                        dbUnit.Name = uiUnit.Name;
-                        dbUnit.Quantity = uiUnit.Quantity;
-                        dbUnit.CustomerId = order.CustomersId;
-                    }
-                    else
-                    {
-                        // It's a brand new unit (newly added in the UI)
-                        // Ensure the ID is fresh if it's truly new, or just add it
-                        order.UnitAssignment.Add(new UnitAssignment
+                        // Brand-new unit: let EF generate the Id via ValueGeneratedOnAdd,
+                        // and let the navigation property fixup set the shadow OrderId automatically.
+                        order.UnitAssignment!.Add(new UnitAssignment
                         {
-                            Id = uiUnit.Id, 
                             Name = uiUnit.Name,
                             Quantity = uiUnit.Quantity,
                             CustomerId = order.CustomersId
                         });
                     }
+                    else
+                    {
+                        var dbUnit = order.UnitAssignment.FirstOrDefault(u => u.Id == uiUnit.Id);
+                        if (dbUnit != null)
+                        {
+                            dbUnit.Name = uiUnit.Name;
+                            dbUnit.Quantity = uiUnit.Quantity;
+                            dbUnit.CustomerId = order.CustomersId;
+                        }
+                    }
                 }
 
-                if (customerId != null)
+                try
                 {
-                    Guid temp = Guid.Parse(customerId);
-                    order.CustomersId = temp;
+                    await _context.SaveChangesAsync();
                 }
-
-                if (workerId != null) {
-                    Guid temp = Guid.Parse(workerId);
-                    order.WorkerId = temp;
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    var entry = ex.Entries.First();
+                    var databaseValues = await entry.GetDatabaseValuesAsync();
+                    if (databaseValues == null)
+                        throw new Exception("The entity you are trying to update was deleted by another user.");
+                    else
+                        throw new Exception("The entity was modified by another user. Please refresh.");
+                
+                throw;
                 }
-
-                order.UpdatedAt = DateTime.UtcNow;
-
-                await _context.SaveChangesAsync();
             }
-            return order!;
+            else
+            {
+                throw new Exception("Order not found");
+            }
+
+                return order!;
         }
 
         public async Task DeleteOrderAsync(Guid id)
