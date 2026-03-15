@@ -1,6 +1,6 @@
 @page "/schedules"
 @using InventoryCRM.Models
-@using ModelSchedule = InventoryCRM.Models.Schedule
+@* @using ModelSchedule = InventoryCRM.Models.Schedule *@
 @inject InventoryCRM.Services.ScheduleService ScheduleService
 @rendermode InteractiveServer
 
@@ -61,7 +61,7 @@ else
 
 @code {
     // Model alias used to avoid name conflict with component class
-    private List<ModelSchedule> schedules;
+    private List<Schedule> schedules;
 
     // Precompute day range: today .. today + 30
     private readonly List<DateTime> Days = Enumerable.Range(0, 31)
@@ -70,10 +70,10 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        schedules = await ScheduleService.GetAllSchedulesAsync() ?? new List<ModelSchedule>();
+        schedules = await ScheduleService.GetAllSchedulesAsync() ?? new List<Schedule>();
     }
 
-    private static string GetDescription(ModelSchedule s)
+    private static string GetDescription(Schedule s)
     {
         // If you decide to add more fields to Schedule later, display them here.
         // For now keep concise: show Id short as fallback
