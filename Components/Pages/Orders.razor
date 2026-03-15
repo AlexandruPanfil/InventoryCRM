@@ -124,13 +124,10 @@
 
             <div>
                 <div class="mb-2">Schedule</div>
-                <InputSelect @bind-Value="selectedSchedule" class="form-control" disabled="@IsReadOnly">
-                    <option value="">No schedule</option>
-                    @foreach (var sch in schedules)
-                    {
-                        <option value="@sch.Id">@sch.StartTime.ToLocalTime().ToString("g") - @sch.EndTime.ToLocalTime().ToString("g")</option>
-                    }
-                </InputSelect>
+                <div class="row-cols-2">
+                    <InputDate @bind-Value="orderSchedule.StartTime" Type="InputDateType.DateTimeLocal" class="form-control" id="orderStartDate" disabled="@IsReadOnly" />
+                    <InputDate @bind-Value="orderSchedule.EndTime" Type="InputDateType.DateTimeLocal" class="form-control" id="orderEndDate" disabled="@IsReadOnly" />
+                </div>
             </div>
             <div>
                 <div class="mb-2">Description:</div>
@@ -217,7 +214,7 @@ else
     <div class="list-group shadow-sm">
         @foreach (var order in orders)
         {
-            <div class="list-group-item list-group-item-action py-3" @onclick="() => OpenOrder(order)" style="cursor:pointer">
+            <div class="list-group-item list-group-item-action py-3" @onclick="() => OpenOrderAsync(order)" style="cursor:pointer">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <span>
                         <strong class="text-primary">@order.Status @order.Identifier :</strong>
@@ -245,9 +242,6 @@ else
     </div>
 }
 
-
-
-
 @code {
     [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
     private List<Order> orders;
@@ -268,7 +262,8 @@ else
     private string unitName = string.Empty;
     private int unitQuantity = 0;
     private static readonly Guid unitDefaultDepositId = Guid.Parse("00000000-0000-0000-0000-000000000001");
-    private List<Schedule> schedules = new List<Schedule>();
+    // private List<Schedule> schedules = new List<Schedule>();
+    private Schedule orderSchedule = new Schedule();
     private string selectedSchedule = string.Empty;
 
     public enum FormMode { Create, Update, ReadOnly }
@@ -305,7 +300,7 @@ else
         units = await UnitService.GetAllUnitsAsync();
         workers = await WorkerService.GetAllUsersAsync();
         customers = await CustomerService.GetAllCustomersAsync();
-        schedules = await ScheduleService.GetAllSchedulesAsync();
+        // schedules = await ScheduleService.GetAllSchedulesAsync();
     }
 
     private async Task FindByName()
@@ -322,6 +317,19 @@ else
 
     private async Task CreateOrder()
     {
+        // Create schedule first
+        try
+        {
+            var createdSchedule = await ScheduleService.CreateScheduleAsync(orderSchedule.StartTime.ToUniversalTime(), orderSchedule.EndTime.ToUniversalTime());
+            newOrder.ScheduleId = createdSchedule.Id;
+            selectedSchedule = createdSchedule.Id.ToString();
+        }
+        catch (ArgumentException ex)
+        {
+            orderConcurrencyError = ex.Message;
+            return;
+        }
+
         newOrder.Description = newDescription;
 
         if (Guid.TryParse(selectedCustomer, out var customerId))
@@ -376,6 +384,28 @@ else
         isSubmitting = true;
 
         try{
+            // Update or create schedule before updating order
+            try
+            {
+                if (newOrder.ScheduleId.HasValue)
+                {
+                    await ScheduleService.UpdateScheduleAsync(newOrder.ScheduleId.Value, orderSchedule.StartTime.ToUniversalTime(), orderSchedule.EndTime.ToUniversalTime());
+                    selectedSchedule = newOrder.ScheduleId.Value.ToString();
+                }
+                else
+                {
+                    var createdSchedule = await ScheduleService.CreateScheduleAsync(orderSchedule.StartTime.ToUniversalTime(), orderSchedule.EndTime.ToUniversalTime());
+                    newOrder.ScheduleId = createdSchedule.Id;
+                    selectedSchedule = createdSchedule.Id.ToString();
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                orderConcurrencyError = ex.Message;
+                isSubmitting = false;
+                return;
+            }
+
             await OrderService.UpdateOrderAsync(newOrder.Id, newDescription, null, selectedUnits, selectedCustomer, selectedWorker, selectedSchedule);
             orderConcurrencyError = null;
             await HandleSubmit();
@@ -391,7 +421,7 @@ else
         }
     }
 
-    private void OpenOrder(Order order)
+    private async Task OpenOrderAsync(Order order)
     {
         if (order.Status == OrderStatus.Finished || order.Status == OrderStatus.Processing)
         {
@@ -415,6 +445,30 @@ else
         selectedWorker = newOrder.WorkerId?.ToString() ?? string.Empty;
         selectedSchedule = newOrder.ScheduleId?.ToString() ?? string.Empty;
         newDescription = newOrder.Description;
+
+        // Load schedule details if available
+        if (newOrder.ScheduleId.HasValue)
+        {
+            var sch = await ScheduleService.GetScheduleAsync(newOrder.ScheduleId.Value);
+            if (sch != null)
+            {
+                // keep DateTime as local for UI editing
+                orderSchedule = new Schedule
+                {
+                    Id = sch.Id,
+                    StartTime = sch.StartTime.ToLocalTime(),
+                    EndTime = sch.EndTime.ToLocalTime()
+                };
+            }
+            else
+            {
+                orderSchedule = new Schedule();
+            }
+        }
+        else
+        {
+            orderSchedule = new Schedule();
+        }
     }
 
     private async Task HandleSubmit()
@@ -428,6 +482,7 @@ else
         selectedWorker = string.Empty;
         selectedSchedule = string.Empty;
         newDescription = string.Empty;
+        orderSchedule = new Schedule();
 
         await LoadOrders();
         StateHasChanged();
@@ -525,6 +580,13 @@ else
     private void OpenCreateForm(){
         isFormVisible = true;
         CurrentMode = FormMode.Create;
+
+        // Initialize default schedule times for creation (local time used for UI)
+        orderSchedule = new Schedule
+        {
+            StartTime = DateTime.Now,
+            EndTime = DateTime.Now.AddHours(1)
+        };
     }
 }
 

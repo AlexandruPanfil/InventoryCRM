@@ -1,14 +1,18 @@
 @page "/schedules"
 @using InventoryCRM.Models
-@* @using ModelSchedule = InventoryCRM.Models.Schedule *@
+@using InventoryCRM.Services
 @inject InventoryCRM.Services.ScheduleService ScheduleService
+@inject InventoryCRM.Services.OrderService OrderService
 @rendermode InteractiveServer
 
-<PageTitle>Schedules</PageTitle>
+@* Keep original alias/comment if needed *@
+@* @using ModelSchedule = InventoryCRM.Models.Schedule *@
 
-<h3>Schedules — next 30 days</h3>
+<PageTitle>Schedules — 15 days table</PageTitle>
 
-@if (schedules == null)
+<h3>Schedules — 15 days</h3>
+
+@if (orders == null)
 {
     <div class="text-center my-4">
         <div class="spinner-border text-primary" role="status">
@@ -16,67 +20,161 @@
         </div>
     </div>
 }
+else if (!orders.Any())
+{
+    <div class="text-center my-4 text-muted">No orders found.</div>
+}
 else
 {
-    @* <div> *@
-        <div class="mb-2 text-muted">Showing today and the following 30 days</div>
-        <div class="kanban-board" role="list">
-            @foreach (var day in Days)
-            {
-                var daySchedules = schedules
-                    .Where(s => s.StartTime.ToLocalTime().Date == day.Date)
-                    .OrderBy(s => s.StartTime)
-                    .ToList();
+    <div class="table-responsive">
+        <table class="table schedules-table">
+            <thead>
+                <tr>
+                    <th class="order-col">Order</th>
+                    @foreach (var day in Days)
+                    {
+                        <th class="day-col" title="@day.ToString("D")">
+                            <div>@day.ToString("dd MMM")</div>
+                            <div class="small">@day.ToString("ddd")</div>
+                        </th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in orders)
+                {
+                    // determine CSS class for order status
+                    var statusClass = GetStatusClass(order.Status);
 
-                <div class="kanban-column" role="listitem" aria-label="@day.ToString("yyyy-MM-dd")">
-                    <div class="kanban-column-header">
-                        <span>@day.ToString("ddd dd MMM")</span>
-                        <span class="kanban-small">@day.DayOfWeek</span>
-                    </div>
+                    <tr>
+                        <td class="order-cell">
+                            <div class="fw-bold">@order.Identifier</div>
+                            <div class="small">@order.Customers?.Name</div>
+                        </td>
 
-                    <div class="kanban-list">
-                        @if (!daySchedules.Any())
+                        @foreach (var day in Days)
                         {
-                            <div class="kanban-small">No schedules</div>
-                        }
-                        else
-                        {
-                            @foreach (var s in daySchedules)
+                            // determine schedule for this order (may come from nav prop or loaded map)
+                            var sch = order.Schedule;
+                            if (sch == null && order.ScheduleId.HasValue)
                             {
-                                <div class="kanban-card">
-                                    <div><strong>@s.StartTime.ToLocalTime().ToString("HH:mm")</strong> — @s.EndTime.ToLocalTime().ToString("HH:mm")</div>
-                                    @if (!string.IsNullOrWhiteSpace(GetDescription(s)))
+                                Schedule tmp;
+                                orderSchedulesMap.TryGetValue(order.ScheduleId.Value, out tmp);
+                                sch = tmp;
+                            }
+
+                            if (sch == null)
+                            {
+                                <td class="empty-cell"></td>
+                            }
+                            else
+                            {
+                                var startLocal = sch.StartTime.ToLocalTime();
+                                var endLocal = sch.EndTime.ToLocalTime();
+
+                                var dayStart = day.Date;
+                                var dayEnd = day.Date.AddDays(1).AddTicks(-1);
+
+                                // does schedule overlap the current day?
+                                var overlaps = startLocal <= dayEnd && endLocal >= dayStart;
+
+                                if (!overlaps)
+                                {
+                                    <td class="empty-cell"></td>
+                                }
+                                else
+                                {
+                                    string cellKindClass;
+                                    if (startLocal.Date == endLocal.Date && day.Date == startLocal.Date)
                                     {
-                                        <div class="kanban-small mt-1">@GetDescription(s)</div>
+                                        cellKindClass = "schedule-single";
                                     }
-                                </div>
+                                    else if (day.Date == startLocal.Date)
+                                    {
+                                        cellKindClass = "schedule-start";
+                                    }
+                                    else if (day.Date == endLocal.Date)
+                                    {
+                                        cellKindClass = "schedule-end";
+                                    }
+                                    else
+                                    {
+                                        cellKindClass = "schedule-mid";
+                                    }
+
+                                    <td class="@($"{statusClass} schedule-cell {cellKindClass}")" title="@($"{startLocal:yyyy-MM-dd HH:mm} — {endLocal:yyyy-MM-dd HH:mm}")">
+                                        @if (day.Date == startLocal.Date)
+                                        {
+                                            <div class="time-text">@startLocal.ToString("HH:mm")</div>
+                                        }
+                                        @if (day.Date == endLocal.Date && endLocal.Date != startLocal.Date)
+                                        {
+                                            <div class="time-text">@endLocal.ToString("HH:mm")</div>
+                                        }
+                                    </td>
+                                }
                             }
                         }
-                    </div>
-                </div>
-            }
-        </div>
-    @* </div> *@
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {
-    // Model alias used to avoid name conflict with component class
-    private List<Schedule> schedules;
+    private List<Order> orders;
+    private Dictionary<Guid, Schedule> orderSchedulesMap = new();
 
-    // Precompute day range: today .. today + 30
-    private readonly List<DateTime> Days = Enumerable.Range(0, 31)
+    // show 15 days starting from today (local)
+    private const int DaysCount = 15;
+    private readonly List<DateTime> Days = Enumerable.Range(0, DaysCount)
         .Select(i => DateTime.Today.AddDays(i))
         .ToList();
 
     protected override async Task OnInitializedAsync()
     {
-        schedules = await ScheduleService.GetAllSchedulesAsync() ?? new List<Schedule>();
+        // load orders; try to attach schedule nav props if absent
+        orders = (await OrderService.GetAllOrdersAsync()) ?? new List<Order>();
+
+        // collect schedule ids referenced by orders
+        var scheduleIds = orders
+            .Where(o => o.ScheduleId.HasValue)
+            .Select(o => o.ScheduleId!.Value)
+            .Distinct()
+            .ToList();
+
+        // load schedules referenced by orders (ScheduleService returns UTC stored values)
+        foreach (var id in scheduleIds)
+        {
+            var sch = await ScheduleService.GetScheduleAsync(id);
+            if (sch != null)
+            {
+                orderSchedulesMap[id] = sch;
+            }
+        }
+
+        // if orders already include Schedule navigation, keep it; otherwise map schedules where available
+        foreach (var o in orders)
+        {
+            if (o.Schedule == null && o.ScheduleId.HasValue && orderSchedulesMap.TryGetValue(o.ScheduleId.Value, out var loaded))
+            {
+                o.Schedule = loaded;
+            }
+        }
     }
 
-    private static string GetDescription(Schedule s)
+    private string GetStatusClass(string? status)
     {
-        // If you decide to add more fields to Schedule later, display them here.
-        // For now keep concise: show Id short as fallback
-        return string.Empty;
+        if (string.IsNullOrWhiteSpace(status)) return "status-other";
+
+        return status switch
+        {
+            OrderStatus.New => "status-new",
+            OrderStatus.Processing => "status-processing",
+            OrderStatus.Finished => "status-finished",
+            "Cancelled" => "status-cancelled",
+            _ => "status-other"
+        };
     }
 }
