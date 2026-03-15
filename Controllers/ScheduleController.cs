@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using InventoryCRM.Services;
 using InventoryCRM.Models;
+using InventoryCRM.Dtos.Schedules;
 
 namespace InventoryCRM.Controllers
 {
