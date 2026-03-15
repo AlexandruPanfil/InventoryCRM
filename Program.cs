@@ -31,6 +31,7 @@ builder.Services.AddScoped<DepositService>();
 builder.Services.AddScoped<WorkerService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<ScheduleService>();
 builder.Services.AddControllers();
 
 

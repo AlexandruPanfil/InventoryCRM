@@ -34,8 +34,8 @@
 
 .centered-second-modal {
     position: fixed;
-    top: 20%;
-    left: 20%;
+    top: 15vh;
+    left: 20vw;
     /* transform: translate(-50%, -50%);  */
     width: 60vw;
     height: 70vh;

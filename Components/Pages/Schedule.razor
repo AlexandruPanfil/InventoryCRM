@@ -1,0 +1,82 @@
+@page "/schedules"
+@using InventoryCRM.Models
+@using ModelSchedule = InventoryCRM.Models.Schedule
+@inject InventoryCRM.Services.ScheduleService ScheduleService
+@rendermode InteractiveServer
+
+<PageTitle>Schedules</PageTitle>
+
+<h3>Schedules — next 30 days</h3>
+
+@if (schedules == null)
+{
+    <div class="text-center my-4">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    @* <div> *@
+        <div class="mb-2 text-muted">Showing today and the following 30 days</div>
+        <div class="kanban-board" role="list">
+            @foreach (var day in Days)
+            {
+                var daySchedules = schedules
+                    .Where(s => s.StartTime.ToLocalTime().Date == day.Date)
+                    .OrderBy(s => s.StartTime)
+                    .ToList();
+
+                <div class="kanban-column" role="listitem" aria-label="@day.ToString("yyyy-MM-dd")">
+                    <div class="kanban-column-header">
+                        <span>@day.ToString("ddd dd MMM")</span>
+                        <span class="kanban-small">@day.DayOfWeek</span>
+                    </div>
+
+                    <div class="kanban-list">
+                        @if (!daySchedules.Any())
+                        {
+                            <div class="kanban-small">No schedules</div>
+                        }
+                        else
+                        {
+                            @foreach (var s in daySchedules)
+                            {
+                                <div class="kanban-card">
+                                    <div><strong>@s.StartTime.ToLocalTime().ToString("HH:mm")</strong> — @s.EndTime.ToLocalTime().ToString("HH:mm")</div>
+                                    @if (!string.IsNullOrWhiteSpace(GetDescription(s)))
+                                    {
+                                        <div class="kanban-small mt-1">@GetDescription(s)</div>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    @* </div> *@
+}
+
+@code {
+    // Model alias used to avoid name conflict with component class
+    private List<ModelSchedule> schedules;
+
+    // Precompute day range: today .. today + 30
+    private readonly List<DateTime> Days = Enumerable.Range(0, 31)
+        .Select(i => DateTime.Today.AddDays(i))
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        schedules = await ScheduleService.GetAllSchedulesAsync() ?? new List<ModelSchedule>();
+    }
+
+    private static string GetDescription(ModelSchedule s)
+    {
+        // If you decide to add more fields to Schedule later, display them here.
+        // For now keep concise: show Id short as fallback
+        return string.Empty;
+    }
+}

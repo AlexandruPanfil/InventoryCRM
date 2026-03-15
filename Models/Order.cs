@@ -28,6 +28,10 @@ namespace InventoryCRM.Models
         public Guid? WorkerId { get; set; }
         public Worker? Worker { get; set; }
 
+        //Foreign key to Schedule
+        public Guid? ScheduleId { get; set; }
+        public Schedule? Schedule { get; set; }
+
         // Optional helper to set/validate status
         public void SetStatus(string status)
         {

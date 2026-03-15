@@ -11,6 +11,7 @@
 @inject InventoryCRM.Services.WorkerService WorkerService
 @inject InventoryCRM.Services.UnitServices.UnitService UnitService
 @inject InventoryCRM.Services.UnitServices.UnitAssignmentService UnitAssignmentService
+@inject InventoryCRM.Services.ScheduleService ScheduleService
 @inject IAuthorizationService AuthorizationService
 @rendermode InteractiveServer
 @attribute [Authorize]
@@ -22,7 +23,7 @@
 {
     <div class="alert alert-warning mb-3">
         @orderConcurrencyError
-        <button class="btn btn-sm btn-secondary ms-3" @onclick="() => orderConcurrencyError = null">
+        <button class="btn btn-sm btn-secondary ms-3 text-bg-dark" @onclick="() => orderConcurrencyError = null">
             <i class="bi bi-x-lg"></i>
         </button>
     </div>
@@ -53,7 +54,7 @@
 
 @if (isFormVisible)
 {
-    <div class="modal-backdrop" @onclick="() => isFormVisible = false"></div>
+    <div class="modal-backdrop" @onclick="HandleSubmit"></div>
 
     <div class="centered-modal">
         <EditForm Model="newOrder" OnValidSubmit="HandleSubmit">
@@ -83,9 +84,9 @@
                     <button class="btn btn-secondary" type="button" @onclick="() => isSecondFormVisible = true">Add Unit</button>
 
                 } 
-                else if (IsEditable && newOrder.Status == "Processing")
+                else if (newOrder.Status == "Processing")
                 {
-                    <button class="btn btn-primary" type="button" @onclick="OrderProcesing">
+                    <button class="btn btn-primary" type="button" @onclick="OrderProcesing" disabled="@( !CanCompleteOrder )" title="@(CanCompleteOrder ? string.Empty : "Assign a worker with a deposit to complete the order")">
                         <i class="bi bi-check-lg"></i>
                         <span>Complete Order</span>
                     </button>
@@ -99,7 +100,7 @@
                 }
 
             </div>
-            <button class="btn-close btn-close-black position-absolute top-0 end-0 m-3" aria-label="Close" @onclick="() => isFormVisible = false"></button>
+            <button class="btn-close btn-close-black position-absolute top-0 end-0 m-3" aria-label="Close" @onclick="HandleSubmit"></button>
             <div>
                 <div class="mb-2">Customer</div>
                 <InputSelect @bind-Value="selectedCustomer" class="form-control" disabled="@IsReadOnly">
@@ -117,6 +118,17 @@
                     @foreach (var worker in workers)
                     {
                         <option value="@worker.Id">@worker.Workername - @worker.Id</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div>
+                <div class="mb-2">Schedule</div>
+                <InputSelect @bind-Value="selectedSchedule" class="form-control" disabled="@IsReadOnly">
+                    <option value="">No schedule</option>
+                    @foreach (var sch in schedules)
+                    {
+                        <option value="@sch.Id">@sch.StartTime.ToLocalTime().ToString("g") - @sch.EndTime.ToLocalTime().ToString("g")</option>
                     }
                 </InputSelect>
             </div>
@@ -243,11 +255,8 @@ else
     private Order newOrder = new Order();
     private string newDescription = string.Empty;
 
-    // private Order openOrder = new Order();
-
     private List<Customer> customers = new List<Customer>();
     private string selectedCustomer = string.Empty;
-    // private Customer selectedCustomer = new Customer();
 
     private List<Worker> workers = new List<Worker>();
     private string selectedWorker  = string.Empty;
@@ -259,6 +268,8 @@ else
     private string unitName = string.Empty;
     private int unitQuantity = 0;
     private static readonly Guid unitDefaultDepositId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+    private List<Schedule> schedules = new List<Schedule>();
+    private string selectedSchedule = string.Empty;
 
     public enum FormMode { Create, Update, ReadOnly }
 
@@ -271,11 +282,15 @@ else
     private string filteredName = string.Empty;
     private bool isFormVisible = false;
     private bool isSecondFormVisible = false;
-    // private bool isDetailsFormVisible = false;
     private bool isSubmitting = false;
 
     private bool advanced = false;
     private string? orderConcurrencyError;
+
+    private bool CanCompleteOrder =>
+        newOrder != null
+        && newOrder.WorkerId.HasValue
+        && workers.Any(w => w.Id == newOrder.WorkerId.Value && w.Deposit != null);
 
     protected override async Task OnInitializedAsync()
     {
@@ -290,6 +305,7 @@ else
         units = await UnitService.GetAllUnitsAsync();
         workers = await WorkerService.GetAllUsersAsync();
         customers = await CustomerService.GetAllCustomersAsync();
+        schedules = await ScheduleService.GetAllSchedulesAsync();
     }
 
     private async Task FindByName()
@@ -313,19 +329,17 @@ else
             newOrder.CustomersId = customerId;
         }
 
+        if (Guid.TryParse(selectedSchedule, out var scheduleId))
+        {
+            newOrder.ScheduleId = scheduleId;
+        }
+
         newOrder.UnitAssignment = selectedUnits;
         newOrder.CreatedAt = DateTime.UtcNow;
         newOrder.UpdatedAt = DateTime.UtcNow;
         newOrder.WorkerId = Guid.TryParse(selectedWorker, out var workerId) ? workerId : (Guid?)null;
 
         await OrderService.CreateOrderAsync(newOrder);
-
-        // isFormVisible = false;
-        newOrder = new Order();
-        selectedUnits = new List<UnitAssignment>();
-        selectedCustomer = string.Empty;
-        selectedWorker = string.Empty;
-        newDescription = string.Empty;
 
         await HandleSubmit();
     }
@@ -356,49 +370,13 @@ else
         isSecondFormVisible = false;
     }
 
-    private void OpenOrder(Order order)
-    {
-        if (order.Status == OrderStatus.Finished || order.Status == OrderStatus.Processing)
-        {
-            CurrentMode = FormMode.ReadOnly;
-        }
-        else
-        {
-            CurrentMode = FormMode.Update;
-        }
-        newOrder = order;
-        isFormVisible = true;
-    
-        selectedCustomer = newOrder.CustomersId.ToString();
-        // Create a NEW list of NEW objects to avoid reference issues
-        selectedUnits = order.UnitAssignment?.Select(u => new UnitAssignment {
-            Id = u.Id,
-            Name = u.Name,
-            Quantity = u.Quantity,
-            CustomerId = u.CustomerId,
-            }).ToList() ?? new List<UnitAssignment>();
-    
-        selectedWorker = newOrder.WorkerId?.ToString() ?? string.Empty;
-        newDescription = newOrder.Description;
-    }
-
-    private async Task HandleSubmit()
-    {
-        isFormVisible = false;
-        isSubmitting = false;
-        newOrder = new Order();
-        selectedUnits = new List<UnitAssignment>();
-        await LoadOrders();
-        StateHasChanged();
-    }
-
     private async Task UpdateOrder()
     {
-        if (isSubmitting) return; // Prevent double clicks
+        if (isSubmitting) return;
         isSubmitting = true;
 
         try{
-            await OrderService.UpdateOrderAsync(newOrder.Id, newDescription, null, selectedUnits, selectedCustomer, selectedWorker);
+            await OrderService.UpdateOrderAsync(newOrder.Id, newDescription, null, selectedUnits, selectedCustomer, selectedWorker, selectedSchedule);
             orderConcurrencyError = null;
             await HandleSubmit();
         }
@@ -411,34 +389,93 @@ else
         {
             isSubmitting = false;
         }
+    }
 
-        // await HandleSubmit();
+    private void OpenOrder(Order order)
+    {
+        if (order.Status == OrderStatus.Finished || order.Status == OrderStatus.Processing)
+        {
+            CurrentMode = FormMode.ReadOnly;
+        }
+        else
+        {
+            CurrentMode = FormMode.Update;
+        }
+        newOrder = order;
+        isFormVisible = true;
+
+        selectedCustomer = newOrder.CustomersId.ToString();
+        selectedUnits = order.UnitAssignment?.Select(u => new UnitAssignment {
+            Id = u.Id,
+            Name = u.Name,
+            Quantity = u.Quantity,
+            CustomerId = u.CustomerId,
+            }).ToList() ?? new List<UnitAssignment>();
+
+        selectedWorker = newOrder.WorkerId?.ToString() ?? string.Empty;
+        selectedSchedule = newOrder.ScheduleId?.ToString() ?? string.Empty;
+        newDescription = newOrder.Description;
+    }
+
+    private async Task HandleSubmit()
+    {
+        isFormVisible = false;
+        isSubmitting = false;
+
+        newOrder = new Order();
+        selectedUnits = new List<UnitAssignment>();
+        selectedCustomer = string.Empty;
+        selectedWorker = string.Empty;
+        selectedSchedule = string.Empty;
+        newDescription = string.Empty;
+
+        await LoadOrders();
+        StateHasChanged();
     }
 
     private async Task OrderProcesing()
     {
+        // If order is New -> move to Processing
         if (newOrder.Status == OrderStatus.New)
         {
             newOrder.SetStatus(OrderStatus.Processing);
-            await OrderService.UpdateOrderAsync(newOrder.Id, OrderStatus.Processing);
+            await OrderService.UpdateOrderAsync(newOrder.Id, null, OrderStatus.Processing);
             await LoadOrders();
             return;
         }
 
+        // Only proceed to complete if order is Processing
         if (newOrder.Status != OrderStatus.Processing)
+            return;
+
+        var orderToComplete = await OrderService.GetOrderAsync(newOrder.Id);
+        if (orderToComplete == null)
         {
+            orderConcurrencyError = "Order not found.";
+            StateHasChanged();
             return;
         }
 
-        var orderToComplete = await OrderService.GetOrderAsync(newOrder.Id);
-        if (orderToComplete == null || !orderToComplete.WorkerId.HasValue)
+        // Validate worker assigned
+        if (!orderToComplete.WorkerId.HasValue)
         {
+            orderConcurrencyError = "Cannot complete order: no worker assigned.";
+            StateHasChanged();
             return;
         }
 
         var worker = workers.FirstOrDefault(w => w.Id == orderToComplete.WorkerId.Value);
-        if (worker?.Deposit == null)
+        if (worker == null)
         {
+            orderConcurrencyError = "Cannot complete order: assigned worker not found in the UI.";
+            StateHasChanged();
+            return;
+        }
+
+        if (worker.Deposit == null)
+        {
+            orderConcurrencyError = "Cannot complete order: assigned worker has no deposit.";
+            StateHasChanged();
             return;
         }
 
@@ -448,15 +485,19 @@ else
 
         var orderUnits = orderToComplete.UnitAssignment?.ToList() ?? new List<UnitAssignment>();
 
+        // Ensure stock sufficiency
         foreach (var orderUnit in orderUnits)
         {
             var workerUnit = workerUnits.FirstOrDefault(u => u.Name == orderUnit.Name);
             if (workerUnit == null || workerUnit.Quantity < orderUnit.Quantity)
             {
+                orderConcurrencyError = $"Cannot complete order: insufficient '{orderUnit.Name}' in worker deposit.";
+                StateHasChanged();
                 return;
             }
         }
 
+        // Perform stock updates and mark assignments installed
         foreach (var orderUnit in orderUnits)
         {
             var workerUnit = workerUnits.First(u => u.Name == orderUnit.Name);
@@ -475,7 +516,7 @@ else
         }
 
         orderToComplete.SetStatus(OrderStatus.Finished);
-        await OrderService.UpdateOrderAsync(orderToComplete.Id, OrderStatus.Finished);
+        await OrderService.UpdateOrderAsync(orderToComplete.Id, null,OrderStatus.Finished);
 
         newOrder = orderToComplete;
         await LoadOrders();

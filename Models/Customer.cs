@@ -14,7 +14,6 @@ namespace InventoryCRM.Models
 
         [RegularExpression(@"^[0-9]{7}$", ErrorMessage = "The value must be exactly 7 digits.")]
         public uint CodTVA { get; set; }
-
         public string Name { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
         public string PhoneNumber { get; set; } = string.Empty;

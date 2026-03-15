@@ -84,14 +84,14 @@ namespace InventoryCRM.Services
         }
 
         //For Update a Order, Include UnitAssignment
-        public async Task<Order> UpdateOrderAsync(Guid id, 
-            string? description = null, 
+        public async Task<Order> UpdateOrderAsync(Guid id,
+            string? description = null,
             string? status = null,
             ICollection<UnitAssignment>? selectedUnits = null,
             string? customerId = null,
-            string? workerId = null)
+            string? workerId = null,
+            string? scheduleId = null)
         {
-
             using var _context = _contextFactory.CreateDbContext();
 
             var order = await _context.Orders
@@ -120,47 +120,62 @@ namespace InventoryCRM.Services
                     order.WorkerId = temp;
                 }
 
+                if (scheduleId != null)
+                {
+                    if (Guid.TryParse(scheduleId, out var sGuid))
+                        order.ScheduleId = sGuid;
+                    else
+                        order.ScheduleId = null;
+                }
+
                 order.UpdatedAt = DateTime.UtcNow;
 
 
                 //Units Synchronization Logic:
-
-                var uiUnits = selectedUnits.ToList() ?? new List<UnitAssignment>();
-                var uiIds = uiUnits.Select(u => u.Id).ToHashSet();
-
-                // Find units that are in the DB but not in the selected list (i.e., removed in the UI)
-                var unitsToRemove = order.UnitAssignment!
-                    .Where(u => !uiIds.Contains(u.Id))
-                    .ToList();
-
-                // Remove units that are no longer selected in the UI
-                foreach (var unit in unitsToRemove)
+                if (selectedUnits == null)
                 {
-                    _context.UnitsAssignment.Remove(unit);
+                    // If the UI sent null, we interpret that as "no change" to the units.
+                    // So we skip any synchronization logic in this case.
                 }
-
-                // Add or Update units from the UI
-                foreach (var uiUnit in selectedUnitList)
+                else
                 {
-                    if (uiUnit.Id == Guid.Empty)
+                    var uiUnits = selectedUnits.ToList() ?? new List<UnitAssignment>();
+                    var uiIds = uiUnits.Select(u => u.Id).ToHashSet();
+
+                    // Find units that are in the DB but not in the selected list (i.e., removed in the UI)
+                    var unitsToRemove = order.UnitAssignment!
+                        .Where(u => !uiIds.Contains(u.Id))
+                        .ToList();
+
+                    // Remove units that are no longer selected in the UI
+                    foreach (var unit in unitsToRemove)
                     {
-                        // Brand-new unit: let EF generate the Id via ValueGeneratedOnAdd,
-                        // and let the navigation property fixup set the shadow OrderId automatically.
-                        order.UnitAssignment!.Add(new UnitAssignment
-                        {
-                            Name = uiUnit.Name,
-                            Quantity = uiUnit.Quantity,
-                            CustomerId = order.CustomersId
-                        });
+                        _context.UnitsAssignment.Remove(unit);
                     }
-                    else
+
+                    // Add or Update units from the UI
+                    foreach (var uiUnit in selectedUnitList)
                     {
-                        var dbUnit = order.UnitAssignment.FirstOrDefault(u => u.Id == uiUnit.Id);
-                        if (dbUnit != null)
+                        if (uiUnit.Id == Guid.Empty)
                         {
-                            dbUnit.Name = uiUnit.Name;
-                            dbUnit.Quantity = uiUnit.Quantity;
-                            dbUnit.CustomerId = order.CustomersId;
+                            // Brand-new unit: let EF generate the Id via ValueGeneratedOnAdd,
+                            // and let the navigation property fixup set the shadow OrderId automatically.
+                            order.UnitAssignment!.Add(new UnitAssignment
+                            {
+                                Name = uiUnit.Name,
+                                Quantity = uiUnit.Quantity,
+                                CustomerId = order.CustomersId
+                            });
+                        }
+                        else
+                        {
+                            var dbUnit = order.UnitAssignment.FirstOrDefault(u => u.Id == uiUnit.Id);
+                            if (dbUnit != null)
+                            {
+                                dbUnit.Name = uiUnit.Name;
+                                dbUnit.Quantity = uiUnit.Quantity;
+                                dbUnit.CustomerId = order.CustomersId;
+                            }
                         }
                     }
                 }

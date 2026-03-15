@@ -1,9 +1,7 @@
-﻿    using InventoryCRM.Models;
+﻿using InventoryCRM.Models;
 using InventoryCRM.Models.UnitModels;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-
-
 
 namespace InventoryCRM.Data
 {
@@ -13,6 +11,7 @@ namespace InventoryCRM.Data
             : base(options)
         {
         }
+
         public DbSet<TodoItem> Todos { get; set; }
         public DbSet<Unit> Units { get; set; }
         public DbSet<ApplicationUser> ApplicationUsers { get; set; }
@@ -21,9 +20,12 @@ namespace InventoryCRM.Data
         public DbSet<Worker> Workers { get; set; }
         public DbSet<Customer> Customers { get; set; }
         public DbSet<Order> Orders { get; set; }
+        public DbSet<Schedule> Schedules { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
             modelBuilder.Entity<TodoItem>(entity =>
             {
                 entity.ToTable("Todos");
@@ -176,6 +178,23 @@ namespace InventoryCRM.Data
                       .WithMany()
                       .HasForeignKey(o => o.WorkerId)
                       .OnDelete(DeleteBehavior.SetNull);
+
+                // Schedule relationship (optional)
+                entity.Property(e => e.ScheduleId).IsRequired(false);
+                entity.HasOne(o => o.Schedule)
+                      .WithMany()
+                      .HasForeignKey(o => o.ScheduleId)
+                      .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // Schedule configuration (если уже есть, можно оставить)
+            modelBuilder.Entity<Schedule>(entity =>
+            {
+                entity.ToTable("Schedules");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.StartTime).IsRequired();
+                entity.Property(e => e.EndTime).IsRequired();
             });
         }
     }
