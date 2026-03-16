@@ -1,12 +1,14 @@
 @page "/schedules"
 @using InventoryCRM.Models
 @using InventoryCRM.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 @inject InventoryCRM.Services.ScheduleService ScheduleService
 @inject InventoryCRM.Services.OrderService OrderService
-@rendermode InteractiveServer
+@inject IAuthorizationService AuthorizationService
+@attribute [Authorize]
 
-@* Keep original alias/comment if needed *@
-@* @using ModelSchedule = InventoryCRM.Models.Schedule *@
+@rendermode InteractiveServer
 
 <PageTitle>Schedules — 15 days table</PageTitle>
 
@@ -125,7 +127,6 @@ else
 @code {
     private List<Order> orders;
     private Dictionary<Guid, Schedule> orderSchedulesMap = new();
-
     // show 15 days starting from today (local)
     private const int DaysCount = 15;
     private readonly List<DateTime> Days = Enumerable.Range(0, DaysCount)
@@ -134,7 +135,6 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // load orders; try to attach schedule nav props if absent
         orders = (await OrderService.GetAllOrdersAsync()) ?? new List<Order>();
 
         // collect schedule ids referenced by orders
