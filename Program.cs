@@ -2,6 +2,7 @@ using InventoryCRM.Components;
 using InventoryCRM.Components.Login;
 using InventoryCRM.Data;
 using InventoryCRM.Services;
+using InventoryCRM.Services.Export;
 using InventoryCRM.Services.UnitServices;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -32,6 +33,12 @@ builder.Services.AddScoped<WorkerService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ScheduleService>();
+builder.Services.AddScoped<ExcelExporter>();
+builder.Services.AddScoped<PdfExporter>();
+builder.Services.AddScoped<CsvExporter>();
+builder.Services.AddKeyedScoped<IDocumentGenerator, ExcelExporter>("excel");
+builder.Services.AddKeyedScoped<IDocumentGenerator, PdfExporter>("pdf");
+builder.Services.AddKeyedScoped<IDocumentGenerator, CsvExporter>("csv");
 builder.Services.AddControllers();
 
 
