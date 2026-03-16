@@ -13,6 +13,8 @@
 @inject InventoryCRM.Services.UnitServices.UnitAssignmentService UnitAssignmentService
 @inject InventoryCRM.Services.ScheduleService ScheduleService
 @inject IAuthorizationService AuthorizationService
+@inject IJSRuntime JS
+@using InventoryCRM.Services.Export
 @rendermode InteractiveServer
 @attribute [Authorize]
 
@@ -63,6 +65,16 @@
                     @(CurrentMode == FormMode.Create ? "Create New Order" :
                       CurrentMode == FormMode.Update ? "Edit Order" : "View Order")
                 </h3>
+
+                @* Export buttons for the opened order (Excel / PDF / CSV) *@
+                @if (newOrder != null && !string.IsNullOrEmpty(newOrder.Identifier))
+                {
+                    <div class="btn-group ms-2">
+                        <button class="btn btn-outline-secondary" type="button" @onclick="() => ExportOrderAsync(toExcel)">Export XLSX</button>
+                        <button class="btn btn-outline-secondary" type="button" @onclick="() => ExportOrderAsync(toPdf)">Export PDF</button>
+                        <button class="btn btn-outline-secondary" type="button" @onclick="() => ExportOrderAsync(toCsv)">Export CSV</button>
+                    </div>
+                }
 
                 @if (CurrentMode == FormMode.Create)
                 {
@@ -265,6 +277,10 @@ else
     // private List<Schedule> schedules = new List<Schedule>();
     private Schedule orderSchedule = new Schedule();
     private string selectedSchedule = string.Empty;
+
+    private string toPdf = "pdf";
+    private string toExcel = "excel";
+    private string toCsv = "csv";
 
     public enum FormMode { Create, Update, ReadOnly }
 
@@ -587,6 +603,54 @@ else
             StartTime = DateTime.Now,
             EndTime = DateTime.Now.AddHours(1)
         };
+    }
+
+    // --- Export helpers added ---
+    private async Task ExportOrderAsync(string format)
+    {
+        if (newOrder == null) return;
+
+        var dto = new[]
+        {
+            new
+            {
+                newOrder.Id,
+                Status = newOrder.Status ?? string.Empty,
+                newOrder.Identifier,
+                Customer = newOrder.Customers?.Name,
+                Worker = newOrder.Worker?.Workername,
+                newOrder.Description,
+                newOrder.CreatedAt,
+                newOrder.UpdatedAt,
+                Units = string.Join(";", newOrder.UnitAssignment?.Select(u => $"{u.Name} x{u.Quantity}") ?? Enumerable.Empty<string>())
+            }
+        };
+
+        IDocumentGenerator generator = format switch
+        {
+            "excel" => ExcelExporter,
+            "pdf" => PdfExporter,
+            _ => CsvExporter
+        };
+
+        byte[] bytes;
+        try
+        {
+            bytes = await generator.GenerateAsync(dto, $"Order_{newOrder.Identifier ?? newOrder.Id.ToString()}");
+        }
+        catch (Exception ex)
+        {
+            orderConcurrencyError = $"Export failed: {ex.Message}";
+            return;
+        }
+
+        var contentType = generator.ContentType;
+        var ext = generator.FileExtension ?? ".bin";
+        var fileName = $"order_{(newOrder.Identifier ?? newOrder.Id.ToString())}{ext}";
+
+        var base64 = Convert.ToBase64String(bytes);
+        var url = $"data:{contentType};base64,{base64}";
+        await JS.InvokeVoidAsync("open", url, "_blank");
     }
 }
 
