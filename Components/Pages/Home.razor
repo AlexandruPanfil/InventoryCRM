@@ -1,57 +1,152 @@
 ﻿@page "/"
+@using InventoryCRM.Models
+@using InventoryCRM.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AnalyticsService AnalyticsService
+@inject OrderService OrderService
+@inject WorkerService WorkerService
+@rendermode InteractiveServer
+@attribute [Authorize]
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Dashboard</PageTitle>
 
-<div class="container py-5 mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8 text-center">
-            @* Hero Section *@
-            <h1 class="display-5 fw-bold text-dark mb-3">Inventory CRM</h1>
-            <p class="lead text-muted mb-5">
-                A streamlined tool for managing field-team equipment, tracking material consumption,
-                and synchronizing worker deposits with the main warehouse.
-            </p>
+@if (isLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">Loading dashboard…</p>
+    </div>
+}
+else
+{
+    <h3 class="mb-4">Dashboard</h3>
 
-            @* Quick Action Cards *@
-            <div class="row g-4 text-start">
-                <div class="col-md-4">
-                    <div class="card h-100 border-0 shadow-sm p-3">
-                        <div class="card-body">
-                            <h6 class="fw-bold"><i class="bi bi-people me-2 text-primary"></i>Workers</h6>
-                            <p class="small text-muted">Register team members and assign field roles.</p>
-                            <a href="workers" class="btn btn-sm btn-outline-primary stretched-link">Setup Teams</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="card h-100 border-0 shadow-sm p-3">
-                        <div class="card-body">
-                            <h6 class="fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Deposits</h6>
-                            <p class="small text-muted">Track mobile inventory held by individual workers.</p>
-                            <a href="deposits" class="btn btn-sm btn-outline-primary stretched-link">Manage Stock</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="card h-100 border-0 shadow-sm p-3">
-                        <div class="card-body">
-                            <h6 class="fw-bold"><i class="bi bi-layers me-2 text-primary"></i>Units</h6>
-                            <p class="small text-muted">Define the base materials and tools in your catalog.</p>
-                            <a href="units" class="btn btn-sm btn-outline-primary stretched-link">Define Units</a>
-                        </div>
-                    </div>
+    <!-- ── KPI Cards ── -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">Open orders</p>
+                    <h2 class="mb-0 text-primary">@openOrders</h2>
                 </div>
             </div>
-
-            @* Secondary Info *@
-            <div class="mt-5 pt-4 border-top">
-                <p class="text-secondary small">
-                    <i class="bi bi-clock-history me-1"></i>
-                    Real-time transaction tracking between field deposits and central storage.
-                </p>
+        </div>
+        <div class="col-sm-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">Finishing this week</p>
+                    <h2 class="mb-0 text-warning">@ordersThisWeek</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted small mb-1">Workers with empty deposit</p>
+                    <h2 class="mb-0 text-danger">@emptyDepositWorkers</h2>
+                </div>
             </div>
         </div>
     </div>
-</div>
+
+    <!-- ── Most consumed units (horizontal bar chart via inline CSS) ── -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Most consumed units</h5>
+            @if (topUnits.Count == 0)
+            {
+                <p class="text-muted">No unit data yet.</p>
+            }
+            else
+            {
+                int maxQty = topUnits.Max(u => u.TotalQty);
+                foreach (var unit in topUnits)
+                {
+                    double pct = maxQty > 0 ? (unit.TotalQty * 100.0 / maxQty) : 0;
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small>@unit.Name</small>
+                            <small class="text-muted">@unit.TotalQty</small>
+                        </div>
+                        <div class="progress" style="height:8px;">
+                            <div class="progress-bar bg-primary"
+                                 role="progressbar"
+                                 style="width:@pct.ToString("F0")%">
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- ── Recent activity feed ── -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Recent activity</h5>
+            @if (recentActivity.Count == 0)
+            {
+                <p class="text-muted">No activity yet.</p>
+            }
+            else
+            {
+                <ul class="list-unstyled mb-0">
+                    @foreach (var order in recentActivity)
+                    {
+                        <li class="d-flex align-items-start py-2 border-bottom">
+                            <span class="badge me-3 mt-1 @GetStatusBadge(order.Status)">@order.Status</span>
+                            <div>
+                                <strong>@order.Identifier</strong>
+                                <span class="text-muted ms-2">@order.Customers?.Name</span>
+                                @if (order.Worker != null)
+                                {
+                                    <span class="text-muted ms-2">· @order.Worker.Workername</span>
+                                }
+                                <br />
+                                <small class="text-muted">@order.UpdatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</small>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+
+    private int openOrders;
+    private int ordersThisWeek;
+    private int emptyDepositWorkers;
+    private List<(string Name, int TotalQty)> topUnits = new();
+    private List<Order> recentActivity = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var kpi1 = AnalyticsService.GetOpenOrdersCountAsync();
+        var kpi2 = AnalyticsService.GetOrdersFinishingThisWeekAsync();
+        var kpi3 = AnalyticsService.GetWorkersWithEmptyDepositAsync();
+        var units = AnalyticsService.GetTopConsumedUnitsAsync();
+        var feed = AnalyticsService.GetRecentOrderActivityAsync();
+
+        await Task.WhenAll(kpi1, kpi2, kpi3, units, feed);
+
+        openOrders = await kpi1;
+        ordersThisWeek = await kpi2;
+        emptyDepositWorkers = await kpi3;
+        topUnits = await units;
+        recentActivity = await feed;
+
+        isLoading = false;
+    }
+
+    private static string GetStatusBadge(string? status) => status switch
+    {
+        OrderStatus.New => "bg-secondary",
+        OrderStatus.Processing => "bg-warning text-dark",
+        OrderStatus.Finished => "bg-success",
+        _ => "bg-light text-dark"
+    };
+}

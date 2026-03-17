@@ -36,6 +36,7 @@ builder.Services.AddScoped<ScheduleService>();
 builder.Services.AddScoped<ExcelExporter>();
 builder.Services.AddScoped<PdfExporter>();
 builder.Services.AddScoped<CsvExporter>();
+builder.Services.AddScoped<AnalyticsService>();
 builder.Services.AddKeyedScoped<IDocumentGenerator, ExcelExporter>("excel");
 builder.Services.AddKeyedScoped<IDocumentGenerator, PdfExporter>("pdf");
 builder.Services.AddKeyedScoped<IDocumentGenerator, CsvExporter>("csv");
