@@ -16,6 +16,7 @@
 @inject InventoryCRM.Services.Export.ExcelExporter ExcelExporter
 @inject InventoryCRM.Services.Export.PdfExporter PdfExporter
 @inject InventoryCRM.Services.Export.CsvExporter CsvExporter
+@inject InventoryCRM.Services.OrderAuditLogService AuditLogService
 @inject IAuthorizationService AuthorizationService
 @inject IJSRuntime JS
 
@@ -210,6 +211,63 @@
 }
 
 
+@* ── Audit log timeline ── *@
+
+
+<div class="mt-4">
+    <button class="btn btn-sm btn-outline-secondary w-100 text-start"
+            type="button"
+            @onclick="ToggleTimeline">
+        <i class="bi bi-clock-history me-1"></i>
+        History
+        <i class="bi @(showTimeline ? "bi-chevron-up" : "bi-chevron-down") float-end"></i>
+    </button>
+
+    @if (showTimeline)
+    {
+        @if (auditLogs == null)
+        {
+            <div class="text-center py-2">
+                <div class="spinner-border spinner-border-sm text-secondary"></div>
+            </div>
+        }
+        else if (auditLogs.Count == 0)
+        {
+            <p class="text-muted small mt-2 ps-2">No history yet.</p>
+        }
+        else
+        {
+            <ul class="list-unstyled mt-2 ps-1">
+                @foreach (var log in auditLogs)
+                {
+                    <li class="d-flex gap-2 mb-2">
+                        <div style="width:3px;background:var(--bs-secondary);border-radius:2px;flex-shrink:0;"></div>
+                        <div>
+                            <span class="badge @GetActionBadge(log.Action) me-1">@log.Action</span>
+                            @if (!string.IsNullOrEmpty(log.OldValue))
+                            {
+                                <small class="text-muted">@log.OldValue → </small>
+                            }
+                            @if (!string.IsNullOrEmpty(log.NewValue))
+                            {
+                                <small class="fw-semibold">@log.NewValue</small>
+                            }
+                            <br />
+                            <small class="text-muted">
+                                @log.Timestamp.ToLocalTime().ToString("dd MMM yyyy, HH:mm")
+                                @if (!string.IsNullOrEmpty(log.UserName))
+                                {
+                                    <span> · @log.UserName</span>
+                                }
+                            </small>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    }
+</div>
+
 @if (orders == null)
 {
     <div class="text-center">
@@ -260,6 +318,9 @@ else
 
 @code {
     [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; }
+    private string? userId;
+    private string? userName;
+
     private List<Order> orders;
 
     private Order newOrder = new Order();
@@ -280,6 +341,9 @@ else
     private static readonly Guid unitDefaultDepositId = Guid.Parse("00000000-0000-0000-0000-000000000001");
     private Schedule orderSchedule = new Schedule();
     private string selectedSchedule = string.Empty;
+
+    private bool showTimeline = false;
+    private List<OrderAuditLog>? auditLogs = null;
 
     private string toPdf = "pdf";
     private string toExcel = "excel";
@@ -307,8 +371,11 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadOrders();
         var authState = await authenticationStateTask;
+        userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        userName = authState.User.Identity?.Name;
+
+        await LoadOrders();
         advanced = (await AuthorizationService.AuthorizeAsync(authState.User, "Advanced")).Succeeded;
     }
 
@@ -423,7 +490,9 @@ else
                 return;
             }
 
-            await OrderService.UpdateOrderAsync(newOrder.Id, newDescription, null, selectedUnits, selectedCustomer, selectedWorker, selectedSchedule);
+            await OrderService.UpdateOrderAsync(newOrder.Id, newDescription, null, selectedUnits, 
+                selectedCustomer, selectedWorker, selectedSchedule,
+                userId, userName);
             orderConcurrencyError = null;
             await HandleSubmit();
         }
@@ -493,6 +562,9 @@ else
         isFormVisible = false;
         isSubmitting = false;
 
+        auditLogs = null;
+        showTimeline = false;
+
         newOrder = new Order();
         selectedUnits = new List<UnitAssignment>();
         selectedCustomer = string.Empty;
@@ -511,7 +583,8 @@ else
         if (newOrder.Status == OrderStatus.New)
         {
             newOrder.SetStatus(OrderStatus.Processing);
-            await OrderService.UpdateOrderAsync(newOrder.Id, null, OrderStatus.Processing);
+            await OrderService.UpdateOrderAsync(newOrder.Id, null, OrderStatus.Processing, 
+                userId : userId, userName : userName);
             await LoadOrders();
             return;
         }
@@ -637,4 +710,20 @@ else
         var base64 = Convert.ToBase64String(bytes);
         await JS.InvokeVoidAsync("downloadFile", fileName, contentType, base64);
     }
+
+    private async Task ToggleTimeline()
+    {
+        showTimeline = !showTimeline;
+        if (showTimeline && auditLogs == null)
+            auditLogs = await AuditLogService.GetLogsForOrderAsync(newOrder.Id);
+    }
+
+    private static string GetActionBadge(string action) => action switch
+    {
+        "Created" => "bg-secondary",
+        "StatusChanged" => "bg-primary",
+        "WorkerAssigned" => "bg-info text-dark",
+        "DescriptionUpdated" => "bg-light text-dark border",
+        _ => "bg-light text-dark border"
+    };
 }

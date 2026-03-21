@@ -11,10 +11,13 @@ namespace InventoryCRM.Services
     public class OrderService
     {
         private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
+        private readonly OrderAuditLogService _auditLog;
 
-        public OrderService(IDbContextFactory<ApplicationDbContext> contextFactory)
+
+        public OrderService(IDbContextFactory<ApplicationDbContext> contextFactory, OrderAuditLogService auditLog)
         {
             _contextFactory = contextFactory;
+            _auditLog = auditLog;
         }
 
         //For All Orders, Include Customer, UnitAssignment, Worker
@@ -80,6 +83,9 @@ namespace InventoryCRM.Services
 
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
+
+            await _auditLog.LogAsync(order.Id, "Created", null, order.Status);
+
             return order;
         }
 
@@ -90,13 +96,18 @@ namespace InventoryCRM.Services
             ICollection<UnitAssignment>? selectedUnits = null,
             string? customerId = null,
             string? workerId = null,
-            string? scheduleId = null)
+            string? scheduleId = null,
+            string? userId = null,
+            string? userName = null)
         {
             using var _context = _contextFactory.CreateDbContext();
 
             var order = await _context.Orders
                 .Include(o => o.UnitAssignment)
                 .FirstOrDefaultAsync(u => u.Id == id);
+
+            var oldStatus = order.Status;
+            var oldWorkerId = order.WorkerId?.ToString();
 
             if (order != null)
             {
@@ -127,6 +138,12 @@ namespace InventoryCRM.Services
                     else
                         order.ScheduleId = null;
                 }
+
+                if (!string.IsNullOrWhiteSpace(status) && status != oldStatus)
+                    await _auditLog.LogAsync(id, "StatusChanged", oldStatus, status, userId, userName);
+
+                if (workerId != null && workerId != oldWorkerId)
+                    await _auditLog.LogAsync(id, "WorkerAssigned", oldWorkerId, workerId, userId, userName);
 
                 order.UpdatedAt = DateTime.UtcNow;
 

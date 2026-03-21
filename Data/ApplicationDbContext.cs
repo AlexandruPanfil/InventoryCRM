@@ -21,6 +21,7 @@ namespace InventoryCRM.Data
         public DbSet<Customer> Customers { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<Schedule> Schedules { get; set; }
+        public DbSet<OrderAuditLog> OrderAuditLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -195,6 +196,23 @@ namespace InventoryCRM.Data
                 entity.Property(e => e.Id).ValueGeneratedOnAdd();
                 entity.Property(e => e.StartTime).IsRequired();
                 entity.Property(e => e.EndTime).IsRequired();
+            });
+
+            modelBuilder.Entity<OrderAuditLog>(entity =>
+            {
+                entity.ToTable("OrderAuditLogs");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.Action).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.OldValue).HasMaxLength(500);
+                entity.Property(e => e.NewValue).HasMaxLength(500);
+                entity.Property(e => e.UserId).HasMaxLength(450);
+                entity.Property(e => e.UserName).HasMaxLength(256);
+
+                entity.HasOne(e => e.Order)
+                      .WithMany()
+                      .HasForeignKey(e => e.OrderId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }
